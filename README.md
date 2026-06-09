@@ -31,10 +31,9 @@ Adapters never see the decision. They do not allow or deny anything.
 
 ## Current Status
 
-**Phase 1 — Foundation and REST Adapter (current)**
+**Phase 2 — REST Adapter Contract Hardening (current)**
 
-This is early foundation work. The repository establishes the adapter boundary, defines
-the normalization model, and provides a working REST adapter skeleton.
+The REST adapter contract is now stable and explicitly documented.
 
 What exists:
 
@@ -42,7 +41,13 @@ What exists:
 - Error hierarchy: `AdapterError`, `InvalidMappingError`, `UnknownRouteError`
 - REST adapter: HTTP method + path → normalized authorization request
 - Mapping config: JSON-loadable route definitions with path pattern capture and action overrides
-- Full test suite, ruff linting, mypy strict type checking
+- JSON Schema for REST mapping config (`schemas/rest-mapping.schema.json`)
+- Canonical adapter contract documentation (`docs/contracts/adapter-contract.md`)
+- Full test suite (Phase 1 + Phase 2 contract/edge-case tests), ruff, mypy strict
+
+**Fail-closed contract:** if `result.success is False`, the caller must not forward
+the operation. A normalization failure is not an authorization decision — treat it
+as deny-by-default.
 
 What does not exist yet:
 
@@ -67,15 +72,14 @@ introducing protocol complexity.
 
 BACnet uses object types, instance numbers, property identifiers, and service primitives
 (`ReadProperty`, `WriteProperty`, `CommandValue`, `SubscribeCOV`). Normalizing BACnet
-correctly requires understanding this model in depth. Phase 1 deliberately excludes
-BACnet so it can be built on a proven normalization foundation rather than alongside
-one.
+correctly requires understanding this model in depth. Phase 2 hardens the normalization
+contract on REST so BACnet can be built on a proven foundation rather than alongside one.
 
 ---
 
 ## Local Setup
 
-Requires Python 3.11+.
+Requires Python 3.10+.
 
 ```bash
 python -m venv .venv

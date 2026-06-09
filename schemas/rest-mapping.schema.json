@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://basis-foundation.dev/schemas/rest-mapping.schema.json",
+  "title": "REST Adapter Mapping Configuration",
+  "description": "Mapping configuration for the basis-adapters REST adapter. Defines how HTTP method + path combinations are normalized into BASIS authorization semantics.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of route mappings. Routes are evaluated in declaration order; the first match wins.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/RouteMapping"
+      }
+    }
+  },
+  "$defs": {
+    "RouteMapping": {
+      "type": "object",
+      "description": "Maps an HTTP method + path pattern to normalized authorization semantics.",
+      "required": ["methods", "path_pattern", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable name for this route. Used in error messages and duplicate-name detection. Must be unique across all named routes in the config.",
+          "minLength": 1
+        },
+        "methods": {
+          "type": "array",
+          "description": "HTTP methods this route applies to. Use [\"*\"] to match any method.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/HttpMethod"
+          }
+        },
+        "path_pattern": {
+          "type": "string",
+          "description": "Path pattern with optional {param} capture groups. Must start with '/'. Example: /devices/{device_id}/points/{point_id}",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Normalized resource category. Passed through to the NormalizedAuthorizationRequest. Examples: point, device, schedule.",
+          "minLength": 1
+        },
+        "resource_id_template": {
+          "type": "string",
+          "description": "Template for the normalized resource identifier. May reference captured path parameters using {param} syntax. All referenced captures must appear in path_pattern. Static values (e.g. \"*\") are also valid. Examples: \"{device_id}:{point_id}\", \"{device_id}\", \"*\"",
+          "minLength": 1
+        },
+        "action_map": {
+          "type": "object",
+          "description": "Per-method action overrides. Keys are HTTP method names (uppercase). Values must be valid normalized action verbs. Methods not listed here fall back to the adapter's default action map.",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)$": {
+              "$ref": "#/$defs/ActionVerb"
+            }
+          }
+        }
+      }
+    },
+    "HttpMethod": {
+      "type": "string",
+      "description": "An HTTP method name or the wildcard '*' to match any method.",
+      "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE", "CONNECT", "*"]
+    },
+    "ActionVerb": {
+      "type": "string",
+      "description": "A normalized BASIS action verb.",
+      "enum": ["read", "write", "control", "discover", "subscribe"]
+    }
+  }
+}

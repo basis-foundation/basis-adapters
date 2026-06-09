@@ -1,0 +1,72 @@
+{
+  "_comment": "Intentionally invalid REST mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by RestMappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: methods is empty — every route must declare at least one method",
+      "name": "empty-methods",
+      "methods": [],
+      "path_pattern": "/devices/{device_id}",
+      "resource_type": "device",
+      "resource_id_template": "{device_id}"
+    },
+    {
+      "_error": "INVALID: unrecognized HTTP method 'FETCH' — only standard HTTP methods and '*' are accepted",
+      "name": "bad-method",
+      "methods": ["FETCH"],
+      "path_pattern": "/devices/{device_id}",
+      "resource_type": "device",
+      "resource_id_template": "{device_id}"
+    },
+    {
+      "_error": "INVALID: path_pattern does not start with '/' — all paths must be absolute",
+      "name": "relative-path",
+      "methods": ["GET"],
+      "path_pattern": "devices/{device_id}",
+      "resource_type": "device",
+      "resource_id_template": "{device_id}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "methods": ["GET"],
+      "path_pattern": "/devices/{device_id}",
+      "resource_type": "",
+      "resource_id_template": "{device_id}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {building_id} which is not a capture in path_pattern",
+      "name": "unknown-capture-ref",
+      "methods": ["GET"],
+      "path_pattern": "/devices/{device_id}",
+      "resource_type": "device",
+      "resource_id_template": "{building_id}:{device_id}"
+    },
+    {
+      "_error": "INVALID: action 'fly' in action_map is not a recognized action verb",
+      "name": "invalid-action",
+      "methods": ["POST"],
+      "path_pattern": "/devices/{device_id}/commands/{command}",
+      "resource_type": "device",
+      "resource_id_template": "{device_id}",
+      "action_map": {
+        "POST": "fly"
+      }
+    },
+    {
+      "_error": "INVALID: malformed capture token '{device_id' — missing closing brace",
+      "name": "malformed-capture",
+      "methods": ["GET"],
+      "path_pattern": "/devices/{device_id",
+      "resource_type": "device",
+      "resource_id_template": "fallback"
+    },
+    {
+      "_error": "INVALID: duplicate capture name '{device_id}' in path_pattern",
+      "name": "duplicate-capture",
+      "methods": ["GET"],
+      "path_pattern": "/devices/{device_id}/sub/{device_id}",
+      "resource_type": "device",
+      "resource_id_template": "{device_id}"
+    }
+  ]
+}
