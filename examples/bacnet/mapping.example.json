@@ -1,0 +1,50 @@
+{
+  "_comment": "Example BACnet mapping configuration for a building automation system. Routes are matched in order; the first match wins.",
+  "routes": [
+    {
+      "name": "analog-input-present-value-read",
+      "service": "ReadProperty",
+      "object_type": "analogInput",
+      "property_identifier": "presentValue",
+      "action": "read",
+      "resource_type": "sensor",
+      "resource_id_template": "{object_type}:{object_instance}"
+    },
+    {
+      "name": "analog-output-present-value-write",
+      "service": "WriteProperty",
+      "object_type": "analogOutput",
+      "property_identifier": "presentValue",
+      "action": "write",
+      "resource_type": "actuator",
+      "resource_id_template": "{object_type}:{object_instance}"
+    },
+    {
+      "name": "binary-output-command",
+      "service": "CommandValue",
+      "object_type": "binaryOutput",
+      "property_identifier": "*",
+      "action": "control",
+      "resource_type": "relay",
+      "resource_id_template": "{device_id}:{object_type}:{object_instance}"
+    },
+    {
+      "name": "cov-subscription",
+      "service": "SubscribeCOV",
+      "object_type": "*",
+      "property_identifier": "*",
+      "action": "subscribe",
+      "resource_type": "object",
+      "resource_id_template": "{object_type}:{object_instance}:{property_identifier}"
+    },
+    {
+      "name": "read-any-property",
+      "service": "ReadProperty",
+      "object_type": "*",
+      "property_identifier": "*",
+      "action": "read",
+      "resource_type": "object",
+      "resource_id_template": "{object_type}:{object_instance}:{property_identifier}"
+    }
+  ]
+}

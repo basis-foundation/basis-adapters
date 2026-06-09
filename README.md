@@ -31,19 +31,22 @@ Adapters never see the decision. They do not allow or deny anything.
 
 ## Current Status
 
-**Phase 2 — REST Adapter Contract Hardening (current)**
+**Phase 3 — BACnet Adapter Skeleton (current)**
 
-The REST adapter contract is now stable and explicitly documented.
+The BACnet adapter normalizes BACnet service primitives into BASIS authorization
+requests. No BACnet/IP stack or bacpypes — pure normalization.
 
 What exists:
 
 - Core models: `ProtocolOperation`, `NormalizedAuthorizationRequest`, `AdapterContext`, `AdapterResult`
 - Error hierarchy: `AdapterError`, `InvalidMappingError`, `UnknownRouteError`
 - REST adapter: HTTP method + path → normalized authorization request
-- Mapping config: JSON-loadable route definitions with path pattern capture and action overrides
+- BACnet adapter: service + object type + property → normalized authorization request
 - JSON Schema for REST mapping config (`schemas/rest-mapping.schema.json`)
+- JSON Schema for BACnet mapping config (`schemas/bacnet-mapping.schema.json`)
 - Canonical adapter contract documentation (`docs/contracts/adapter-contract.md`)
-- Full test suite (Phase 1 + Phase 2 contract/edge-case tests), ruff, mypy strict
+- BACnet architecture documentation (`docs/architecture/bacnet-adapter.md`)
+- Full test suite (REST + BACnet), ruff, mypy strict
 
 **Fail-closed contract:** if `result.success is False`, the caller must not forward
 the operation. A normalization failure is not an authorization decision — treat it
@@ -51,9 +54,9 @@ as deny-by-default.
 
 What does not exist yet:
 
-- BACnet adapter
 - Running proxy server
 - Gateway HTTP client
+- Modbus adapter
 - Docker / Kubernetes / CI configuration
 - Integration tests against a live gateway
 
@@ -68,12 +71,44 @@ introducing protocol complexity.
 
 ---
 
-## Why BACnet Later?
+## BACnet Adapter
 
 BACnet uses object types, instance numbers, property identifiers, and service primitives
-(`ReadProperty`, `WriteProperty`, `CommandValue`, `SubscribeCOV`). Normalizing BACnet
-correctly requires understanding this model in depth. Phase 2 hardens the normalization
-contract on REST so BACnet can be built on a proven foundation rather than alongside one.
+(`ReadProperty`, `WriteProperty`, `SubscribeCOV`, `CommandValue`). The BACnet adapter
+maps these to BASIS authorization semantics via a route config with wildcard matching
+on service, object type, and property identifier.
+
+```python
+from basis_adapters.models import AdapterContext
+from basis_adapters.bacnet import BacnetAdapter, BacnetMappingConfig, BacnetOperation
+
+import json
+
+with open("examples/bacnet/mapping.example.json") as f:
+    config = BacnetMappingConfig.from_dict(json.load(f))
+
+ctx = AdapterContext(adapter_id="bacnet-primary")
+adapter = BacnetAdapter(mapping=config, context=ctx)
+
+op = BacnetOperation(
+    service="ReadProperty",
+    object_type="analogInput",
+    object_instance=1,
+    property_identifier="presentValue",
+    device_id="device-42",
+)
+
+result = adapter.normalize(op)
+
+if result.success:
+    req = result.request
+    # Submit req to basis-gateway
+    print(f"action={req.action} resource_type={req.resource_type} resource_id={req.resource_id}")
+    # action=read resource_type=sensor resource_id=analogInput:1
+else:
+    print(f"Normalization failed: {result.error}")
+    # Fail closed — do not forward the operation
+```
 
 ---
 
