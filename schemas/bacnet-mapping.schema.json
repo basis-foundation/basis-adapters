@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://basis.example/schemas/bacnet-mapping.schema.json",
+  "title": "BACnet Mapping Config",
+  "description": "Defines how BACnet service primitives are normalized into BASIS authorization requests.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of BACnet route mappings. First match wins.",
+      "items": { "$ref": "#/$defs/BacnetRoute" }
+    }
+  },
+  "$defs": {
+    "BacnetService": {
+      "type": "string",
+      "description": "A recognized BACnet service primitive, or '*' to match any.",
+      "enum": ["ReadProperty", "WriteProperty", "SubscribeCOV", "CommandValue", "*"]
+    },
+    "ActionVerb": {
+      "type": "string",
+      "description": "Normalized BASIS action verb. Empty string defers to the default service action map.",
+      "enum": ["read", "write", "control", "discover", "subscribe", ""]
+    },
+    "BacnetRoute": {
+      "type": "object",
+      "description": "A single BACnet route mapping.",
+      "required": ["service", "object_type", "property_identifier", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable name. Must be unique across all routes in the config.",
+          "default": ""
+        },
+        "service": {
+          "$ref": "#/$defs/BacnetService",
+          "description": "BACnet service to match. Use '*' to match any service."
+        },
+        "object_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "BACnet object type to match, e.g. 'analogInput'. Use '*' to match any object type."
+        },
+        "property_identifier": {
+          "type": "string",
+          "minLength": 1,
+          "description": "BACnet property identifier to match, e.g. 'presentValue'. Use '*' to match any property."
+        },
+        "action": {
+          "$ref": "#/$defs/ActionVerb",
+          "description": "Normalized action verb. If empty, the default service action map is used.",
+          "default": ""
+        },
+        "resource_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Normalized resource category, e.g. 'point', 'device'."
+        },
+        "resource_id_template": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Template for the resource ID. May reference {service}, {object_type}, {object_instance}, {property_identifier}, {device_id}."
+        }
+      }
+    }
+  }
+}
