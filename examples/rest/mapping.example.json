@@ -1,0 +1,73 @@
+{
+  "_comment": "Example REST adapter mapping configuration for a BAS device/point hierarchy.",
+  "routes": [
+    {
+      "name": "read-point",
+      "methods": ["GET", "HEAD"],
+      "path_pattern": "/devices/{device_id}/points/{point_id}",
+      "resource_type": "point",
+      "resource_id_template": "{device_id}:{point_id}"
+    },
+    {
+      "name": "write-point",
+      "methods": ["POST", "PUT", "PATCH"],
+      "path_pattern": "/devices/{device_id}/points/{point_id}",
+      "resource_type": "point",
+      "resource_id_template": "{device_id}:{point_id}",
+      "action_map": {
+        "POST":  "write",
+        "PUT":   "write",
+        "PATCH": "write"
+      }
+    },
+    {
+      "name": "control-device",
+      "methods": ["POST"],
+      "path_pattern": "/devices/{device_id}/commands/{command}",
+      "resource_type": "device",
+      "resource_id_template": "{device_id}",
+      "action_map": {
+        "POST": "control"
+      }
+    },
+    {
+      "name": "discover-devices",
+      "methods": ["GET"],
+      "path_pattern": "/devices",
+      "resource_type": "device",
+      "resource_id_template": "*"
+    },
+    {
+      "name": "read-device",
+      "methods": ["GET"],
+      "path_pattern": "/devices/{device_id}",
+      "resource_type": "device",
+      "resource_id_template": "{device_id}"
+    },
+    {
+      "name": "discover-schedules",
+      "methods": ["GET"],
+      "path_pattern": "/devices/{device_id}/schedules",
+      "resource_type": "schedule",
+      "resource_id_template": "{device_id}:*"
+    },
+    {
+      "name": "read-schedule",
+      "methods": ["GET"],
+      "path_pattern": "/devices/{device_id}/schedules/{schedule_id}",
+      "resource_type": "schedule",
+      "resource_id_template": "{device_id}:{schedule_id}"
+    },
+    {
+      "name": "write-schedule",
+      "methods": ["PUT", "PATCH"],
+      "path_pattern": "/devices/{device_id}/schedules/{schedule_id}",
+      "resource_type": "schedule",
+      "resource_id_template": "{device_id}:{schedule_id}",
+      "action_map": {
+        "PUT":   "write",
+        "PATCH": "write"
+      }
+    }
+  ]
+}
