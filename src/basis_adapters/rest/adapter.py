@@ -65,7 +65,14 @@ class RestAdapter:
         On success: returns AdapterResult.ok(NormalizedAuthorizationRequest).
         On failure: returns AdapterResult.fail(error_message).
 
-        This method never raises — errors are captured into AdapterResult.
+        Contract:
+        - This method never raises — errors are captured into AdapterResult.
+        - If result.success is False, the caller MUST NOT forward the operation.
+          A normalization failure is not an authorization decision; treat it as
+          deny-by-default.
+        - Query strings in operation.path are stripped before matching.
+        - The original ProtocolOperation is always embedded in result.request
+          as protocol_evidence, regardless of any path normalization.
         """
         try:
             return self._normalize(operation)

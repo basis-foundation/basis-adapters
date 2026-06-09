@@ -1,0 +1,23 @@
+{
+  "_comment": "Minimal valid REST mapping config — one read route, one write route.",
+  "routes": [
+    {
+      "name": "read-point",
+      "methods": ["GET", "HEAD"],
+      "path_pattern": "/points/{point_id}",
+      "resource_type": "point",
+      "resource_id_template": "{point_id}"
+    },
+    {
+      "name": "write-point",
+      "methods": ["PUT", "PATCH"],
+      "path_pattern": "/points/{point_id}",
+      "resource_type": "point",
+      "resource_id_template": "{point_id}",
+      "action_map": {
+        "PUT":   "write",
+        "PATCH": "write"
+      }
+    }
+  ]
+}
