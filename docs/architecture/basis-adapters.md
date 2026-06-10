@@ -18,7 +18,7 @@ Adapters do not answer whether the request should be allowed.
 - Protocol-specific parsing: understanding HTTP methods and paths, BACnet object
   identifiers and property references, Modbus function codes and register addresses,
   OPC UA node identifiers and service requests, MQTT topics and publish/subscribe
-  operations.
+  operations, DNP3 object groups, point indexes, and control operations.
 - Normalization: mapping protocol operations to a stable, protocol-agnostic
   authorization request shape (`NormalizedAuthorizationRequest`).
 - Mapping configuration: rules that describe which protocol operations correspond to
@@ -104,10 +104,10 @@ security bypass. Adapters must not receive, inspect, or act on authorization dec
 
 ## Current Protocol Support
 
-Five adapters are implemented and normalization-complete: REST, BACnet, Modbus,
-OPC UA, and MQTT. All five emit the canonical Normalized Authorization Request
-shape and participate in the cross-protocol contract tests. Planned protocols
-(DNP3, IEC 61850, KNX, Niagara) are tracked in the README roadmap.
+Six adapters are implemented and normalization-complete: REST, BACnet, Modbus,
+OPC UA, MQTT, and DNP3. All six emit the canonical Normalized Authorization
+Request shape and participate in the cross-protocol contract tests. Planned
+protocols (IEC 61850, KNX, Niagara) are tracked in the README roadmap.
 
 ### REST
 
@@ -149,6 +149,16 @@ normalizes to `write` and `SUBSCRIBE` to `subscribe` — the existing action
 vocabulary, with no new verbs. Wildcard topic filters (`+`, `#`) are preserved
 verbatim and never expanded; wildcard authorization is a policy question, not
 a normalization question. See [mqtt-adapter.md](mqtt-adapter.md).
+
+### DNP3
+
+DNP3 is the dominant utility SCADA protocol: masters poll and command
+outstations whose data is organized into object groups, variations, and point
+indexes. `READ` normalizes to `read`; `SELECT`, `OPERATE`, `DIRECT_OPERATE`,
+and `CONTROL` normalize to `execute` (control commands, not data writes);
+`ENABLE_UNSOLICITED` normalizes to `subscribe`. Select-before-operate is
+normalized statelessly — both steps are authorization-relevant, and the
+control model is preserved as evidence. See [dnp3-adapter.md](dnp3-adapter.md).
 
 ---
 

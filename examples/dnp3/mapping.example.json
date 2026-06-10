@@ -1,0 +1,85 @@
+{
+  "_comment": "Example DNP3 adapter mapping configuration. Routes are evaluated in order; the first match wins. Use '*' as a wildcard for operation or point_type. Control routes (SELECT, OPERATE, DIRECT_OPERATE, CONTROL) must reference {point_index} so the controlled point is identified. Command values are never template fields — they remain protocol evidence.",
+  "routes": [
+    {
+      "name": "read-analog-input",
+      "operation": "READ",
+      "point_type": "analog_input",
+      "action": "read",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/analog_input/{point_index}"
+    },
+    {
+      "name": "read-binary-input",
+      "operation": "READ",
+      "point_type": "binary_input",
+      "action": "read",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/binary_input/{point_index}"
+    },
+    {
+      "name": "read-counter",
+      "operation": "READ",
+      "point_type": "counter",
+      "action": "read",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/counter/{point_index}"
+    },
+    {
+      "name": "read-object-group",
+      "operation": "READ",
+      "point_type": "*",
+      "action": "read",
+      "resource_type": "dnp3_object_group",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/group/{object_group}/variation/{variation}"
+    },
+    {
+      "name": "select-binary-output",
+      "operation": "SELECT",
+      "point_type": "binary_output",
+      "action": "execute",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/binary_output/{point_index}"
+    },
+    {
+      "name": "operate-binary-output",
+      "operation": "OPERATE",
+      "point_type": "binary_output",
+      "action": "execute",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/binary_output/{point_index}"
+    },
+    {
+      "name": "direct-operate-binary-output",
+      "operation": "DIRECT_OPERATE",
+      "point_type": "binary_output",
+      "action": "execute",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/binary_output/{point_index}"
+    },
+    {
+      "name": "direct-operate-analog-output",
+      "operation": "DIRECT_OPERATE",
+      "point_type": "analog_output",
+      "action": "execute",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/analog_output/{point_index}"
+    },
+    {
+      "name": "control-any-point",
+      "operation": "CONTROL",
+      "point_type": "*",
+      "action": "",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/{point_type}/{point_index}"
+    },
+    {
+      "name": "enable-unsolicited",
+      "operation": "ENABLE_UNSOLICITED",
+      "point_type": "*",
+      "action": "subscribe",
+      "resource_type": "dnp3_event_class",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/events/class/{event_class}"
+    }
+  ]
+}

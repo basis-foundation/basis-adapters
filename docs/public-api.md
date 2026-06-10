@@ -87,6 +87,21 @@ detail and may change without notice.
 | `VALID_MQTT_QOS_LEVELS` | Allowed QoS levels (0, 1, 2). |
 | `VALID_MQTT_TEMPLATE_FIELDS` | Allowed fields in MQTT resource-ID templates. |
 
+## DNP3 (`basis_adapters.dnp3`)
+
+| Name | Purpose |
+|---|---|
+| `Dnp3Adapter` | Normalizes DNP3 read/control intents into a `NormalizedAuthorizationRequest`. |
+| `Dnp3MappingConfig` | Validated DNP3 mapping configuration; `from_dict()` constructor. Schema: `schemas/dnp3-mapping.schema.json`. |
+| `Dnp3Operation` | Typed DNP3 operation (operation, addresses, outstation/master, object group/variation, point identity, control evidence). |
+| `Dnp3RouteMapping` | A single DNP3 route mapping entry. |
+| `DNP3_CONTROL_OPERATIONS` | DNP3 operations treated as point-specific control commands (`SELECT`, `OPERATE`, `DIRECT_OPERATE`, `CONTROL`). |
+| `VALID_DNP3_ACTIONS` | Normalized action verbs accepted for DNP3 routes (shared set plus `execute`). |
+| `VALID_DNP3_CONTROL_MODELS` | Allowed control models (`select_before_operate`, `direct_operate`). |
+| `VALID_DNP3_OPERATIONS` | Allowed DNP3 operation names (`READ`, `SELECT`, `OPERATE`, `DIRECT_OPERATE`, `CONTROL`, `ENABLE_UNSOLICITED`). |
+| `VALID_DNP3_POINT_TYPES` | Allowed DNP3 point types (`binary_input`, `binary_output`, `analog_input`, `analog_output`, `counter`, `frozen_counter`). |
+| `VALID_DNP3_TEMPLATE_FIELDS` | Allowed fields in DNP3 resource-ID templates. |
+
 ## Serialization Contract
 
 `NormalizedAuthorizationRequest.to_dict()` and `ProtocolOperation.to_dict()` are

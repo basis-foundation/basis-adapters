@@ -13,8 +13,10 @@ Validated pairs:
 5. OPC UA mapping example against opcua-mapping.schema.json.
 6. MQTT mapping example against mqtt-mapping.schema.json, and the
    deliberately invalid MQTT mapping example FAILS validation.
-7. All handoff examples against normalized-authorization-request.schema.json.
-8. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT) against the
+7. DNP3 mapping example against dnp3-mapping.schema.json, and the
+   deliberately invalid DNP3 mapping example FAILS validation.
+8. All handoff examples against normalized-authorization-request.schema.json.
+9. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT, DNP3) against the
    normalized request schema — schemas must match the implementation, not
    just the example files.
 
@@ -37,6 +39,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
 from basis_adapters.bacnet import BacnetAdapter, BacnetMappingConfig, BacnetOperation
+from basis_adapters.dnp3 import Dnp3Adapter, Dnp3MappingConfig, Dnp3Operation
 from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
 from basis_adapters.models import AdapterContext, ProtocolOperation
 from basis_adapters.mqtt import MqttAdapter, MqttMappingConfig, MqttOperation
@@ -52,6 +55,7 @@ BACNET_MAPPING_SCHEMA = SCHEMAS / "bacnet-mapping.schema.json"
 MODBUS_MAPPING_SCHEMA = SCHEMAS / "modbus-mapping.schema.json"
 OPCUA_MAPPING_SCHEMA = SCHEMAS / "opcua-mapping.schema.json"
 MQTT_MAPPING_SCHEMA = SCHEMAS / "mqtt-mapping.schema.json"
+DNP3_MAPPING_SCHEMA = SCHEMAS / "dnp3-mapping.schema.json"
 NORMALIZED_REQUEST_SCHEMA = SCHEMAS / "normalized-authorization-request.schema.json"
 
 
@@ -116,6 +120,14 @@ class TestMappingExamplesMatchSchemas:
         with pytest.raises(ValidationError):
             validator_for(MQTT_MAPPING_SCHEMA).validate(instance)
 
+    def test_dnp3_mapping_example_matches_schema(self) -> None:
+        validate_example(DNP3_MAPPING_SCHEMA, EXAMPLES / "dnp3" / "mapping.example.json")
+
+    def test_dnp3_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(load_json(EXAMPLES / "dnp3" / "mapping-invalid.example.json"))
+        with pytest.raises(ValidationError):
+            validator_for(DNP3_MAPPING_SCHEMA).validate(instance)
+
 
 class TestHandoffExamplesMatchNormalizedRequestSchema:
     @pytest.mark.parametrize(
@@ -127,6 +139,8 @@ class TestHandoffExamplesMatchNormalizedRequestSchema:
             "opcua-normalized-request.example.json",
             "mqtt-publish-normalized-request.example.json",
             "mqtt-subscribe-normalized-request.example.json",
+            "dnp3-read-normalized-request.example.json",
+            "dnp3-direct-operate-normalized-request.example.json",
         ],
     )
     def test_handoff_example_matches_schema(self, example_name: str) -> None:
@@ -247,6 +261,51 @@ class TestLiveAdapterOutputMatchesNormalizedRequestSchema:
         assert d["resource_id"] == "mqtt:building/+/telemetry"
         validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
 
+    def test_dnp3_read_output_matches_schema(self) -> None:
+        config = Dnp3MappingConfig.from_dict(load_json(EXAMPLES / "dnp3" / "mapping.example.json"))
+        adapter = Dnp3Adapter(mapping=config, context=AdapterContext(adapter_id="dnp3-schema"))
+        op = Dnp3Operation(
+            operation="READ",
+            source_address=1,
+            destination_address=10,
+            outstation_id="os-14",
+            master_id="master-1",
+            object_group=30,
+            variation=5,
+            point_index=3,
+            point_type="analog_input",
+            function_code=1,
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "read"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_dnp3_direct_operate_output_matches_schema(self) -> None:
+        config = Dnp3MappingConfig.from_dict(load_json(EXAMPLES / "dnp3" / "mapping.example.json"))
+        adapter = Dnp3Adapter(mapping=config, context=AdapterContext(adapter_id="dnp3-schema"))
+        op = Dnp3Operation(
+            operation="DIRECT_OPERATE",
+            source_address=1,
+            destination_address=10,
+            outstation_id="os-14",
+            object_group=12,
+            variation=1,
+            point_index=7,
+            point_type="binary_output",
+            function_code=5,
+            control_code=65,
+            control_model="direct_operate",
+            value="LATCH_ON",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "execute"
+        assert d["resource_id"] == "dnp3:outstation:os-14/binary_output/7"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
 
 class TestSchemasAreThemselvesValid:
     @pytest.mark.parametrize(
@@ -257,6 +316,7 @@ class TestSchemasAreThemselvesValid:
             MODBUS_MAPPING_SCHEMA,
             OPCUA_MAPPING_SCHEMA,
             MQTT_MAPPING_SCHEMA,
+            DNP3_MAPPING_SCHEMA,
             NORMALIZED_REQUEST_SCHEMA,
         ],
         ids=lambda p: p.name,

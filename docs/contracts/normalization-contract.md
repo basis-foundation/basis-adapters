@@ -2,14 +2,14 @@
 
 ## Status
 
-Stable — Phase 10
+Stable — Phase 11
 
 ## Overview
 
 Every adapter in `basis-adapters` produces a single output type:
 `NormalizedAuthorizationRequest`. This document defines the canonical shape of
-that output, how REST, BACnet, Modbus, OPC UA, and MQTT all map into it, and
-how an enforcement boundary should consume it.
+that output, how REST, BACnet, Modbus, OPC UA, MQTT, and DNP3 all map into it,
+and how an enforcement boundary should consume it.
 
 ---
 
@@ -32,7 +32,7 @@ participate in that decision.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`) |
+| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`, `"dnp3"`) |
 | `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`, `"execute"`, `"browse"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
 | `resource_id` | string | yes | Stable identifier for the target resource |
@@ -99,7 +99,17 @@ are evidence only — they are never treated as verified identity.
 `protocol_version`. Note that `client_id` is evidence only — it is never
 treated as verified identity.
 
-All five structures are nested under `protocol_evidence` so enforcement boundaries
+**DNP3:** `method` is the DNP3 operation name (e.g. `READ`, `SELECT`,
+`OPERATE`, `DIRECT_OPERATE`). `path` is a deterministic outstation-rooted
+address (e.g. `outstation:os-14/binary_output/7`). `metadata` carries
+`operation`, `source_address`, `destination_address`, `outstation_id`,
+`master_id`, `object_group`, `variation`, `point_index`, `point_type`,
+`function_code`, `qualifier`, `control_code`, `control_model`, `event_class`,
+and `value`. Note that addresses and `master_id` are evidence only — they are
+never treated as verified identity — and command values stay in evidence,
+never in resource IDs.
+
+All six structures are nested under `protocol_evidence` so enforcement boundaries
 and audit systems can always find protocol-specific detail without it polluting
 the canonical fields.
 
@@ -188,7 +198,37 @@ produces `resource_id = "mqtt:building/+/telemetry"` — the `+` wildcard is
 preserved verbatim, never expanded. Wildcard authorization policy belongs to
 policy evaluation, not the adapter.
 
-All five protocols produce the same field set. The canonical shape is
+## How DNP3 Maps into the Canonical Shape
+
+```
+DNP3 operation   → action (via route action or default operation→action map:
+                   READ→read, SELECT→execute, OPERATE→execute,
+                   DIRECT_OPERATE→execute, CONTROL→execute,
+                   ENABLE_UNSOLICITED→subscribe)
+route.resource_type → resource_type
+resource_id_template rendered with DNP3 fields → resource_id
+"dnp3"           → protocol
+Dnp3Operation.to_protocol_operation() → protocol_evidence
+metadata["subject_hint"] → subject_hint
+```
+
+Template fields for DNP3: `{operation}`, `{outstation_id}`, `{master_id}`,
+`{source_address}`, `{destination_address}`, `{object_group}`, `{variation}`,
+`{point_index}`, `{point_type}`, `{event_class}`. Optional fields are only
+substitutable when present on the operation. Command values are never
+template fields — they remain protocol evidence.
+
+Example: a `READ` of analog input point 3 on outstation `os-14` with template
+`dnp3:outstation:{outstation_id}/analog_input/{point_index}` produces
+`resource_id = "dnp3:outstation:os-14/analog_input/3"`; a `DIRECT_OPERATE` of
+binary output point 7 with template
+`dnp3:outstation:{outstation_id}/binary_output/{point_index}` produces
+`resource_id = "dnp3:outstation:os-14/binary_output/7"` and
+`action = "execute"`. SELECT and OPERATE normalize independently — the
+adapter keeps no select/operate state; the control model is preserved in
+evidence.
+
+All six protocols produce the same field set. The canonical shape is
 identical; only `protocol` and `protocol_evidence` internals differ.
 
 ---
@@ -282,4 +322,4 @@ Example handoff payloads are in `examples/handoff/`.
 - **`schemas/normalized-authorization-request.schema.json`** — machine-readable
   JSON Schema for the serialized form.
 - **`examples/handoff/`** — concrete example payloads for REST, BACnet,
-  Modbus, OPC UA, and MQTT.
+  Modbus, OPC UA, MQTT, and DNP3.
