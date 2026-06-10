@@ -2,14 +2,14 @@
 
 ## Status
 
-Stable — Phase 4
+Stable — Phase 5
 
 ## Overview
 
 Every adapter in `basis-adapters` produces a single output type:
 `NormalizedAuthorizationRequest`. This document defines the canonical shape of
-that output, how REST and BACnet both map into it, and how an enforcement
-boundary should consume it.
+that output, how REST, BACnet, and Modbus all map into it, and how an
+enforcement boundary should consume it.
 
 ---
 
@@ -32,7 +32,7 @@ participate in that decision.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`) |
+| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`) |
 | `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
 | `resource_id` | string | yes | Stable identifier for the target resource |
@@ -75,7 +75,12 @@ encodes object identity as `{object_type}:{object_instance}:{property_identifier
 `metadata` carries `service`, `object_type`, `object_instance`,
 `property_identifier`, `device_id`, `priority`, and `value_present`.
 
-Both structures are nested under `protocol_evidence` so enforcement boundaries
+**Modbus:** `method` is the Modbus function code name (e.g. `ReadHoldingRegisters`).
+`path` encodes unit and address as `unit:{unit_id}:addr:{address}`. `metadata`
+carries `function`, `unit_id`, `address`, `quantity`, `value_present`,
+`register_type`, `source_address`, and `transaction_id`.
+
+All three structures are nested under `protocol_evidence` so enforcement boundaries
 and audit systems can always find protocol-specific detail without it polluting
 the canonical fields.
 
@@ -103,8 +108,22 @@ BacnetOperation.to_protocol_operation() → protocol_evidence
 metadata["subject_hint"] → subject_hint
 ```
 
-Both protocols produce the same field set. The canonical shape is identical;
-only `protocol` and `protocol_evidence` internals differ.
+## How Modbus Maps into the Canonical Shape
+
+```
+Modbus function  → action (via route action or default function→action map)
+route.resource_type → resource_type
+resource_id_template rendered with Modbus fields → resource_id
+"modbus"         → protocol
+ModbusOperation.to_protocol_operation() → protocol_evidence
+metadata["subject_hint"] → subject_hint
+```
+
+Template fields for Modbus: `{function}`, `{unit_id}`, `{address}`,
+`{quantity}`, `{register_type}`.
+
+All three protocols produce the same field set. The canonical shape is
+identical; only `protocol` and `protocol_evidence` internals differ.
 
 ---
 

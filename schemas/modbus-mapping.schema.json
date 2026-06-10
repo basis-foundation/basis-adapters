@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12",
+  "$id": "https://basis-foundation.example/schemas/modbus-mapping.schema.json",
+  "title": "ModbusMappingConfig",
+  "description": "Configuration schema for the Modbus adapter mapping. Describes how Modbus function requests are normalized into BASIS authorization requests.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of route mappings. Routes are evaluated in order; the first match wins.",
+      "items": {
+        "$ref": "#/$defs/ModbusRouteMapping"
+      }
+    }
+  },
+  "$defs": {
+    "ModbusRouteMapping": {
+      "type": "object",
+      "description": "Maps a Modbus function and register type to normalized authorization semantics.",
+      "required": ["function", "register_type", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable route name. Must be unique across all routes in the config if non-empty.",
+          "default": ""
+        },
+        "function": {
+          "description": "Modbus function code name to match. Use '*' to match any function.",
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "ReadCoils",
+                "ReadDiscreteInputs",
+                "ReadHoldingRegisters",
+                "ReadInputRegisters",
+                "WriteSingleCoil",
+                "WriteSingleRegister",
+                "WriteMultipleCoils",
+                "WriteMultipleRegisters",
+                "*"
+              ]
+            }
+          ]
+        },
+        "register_type": {
+          "type": "string",
+          "description": "Register type to match, e.g. 'holding_register', 'coil', 'input_register', 'discrete_input'. Use '*' to match any register type.",
+          "minLength": 1,
+          "examples": ["holding_register", "coil", "input_register", "discrete_input", "*"]
+        },
+        "action": {
+          "type": "string",
+          "description": "Normalized action verb. If empty, the default function→action map is used (reads→read, writes→write).",
+          "enum": ["read", "write", "control", "discover", "subscribe", ""],
+          "default": ""
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Normalized resource category, e.g. 'modbus_register'.",
+          "minLength": 1,
+          "examples": ["modbus_register"]
+        },
+        "resource_id_template": {
+          "type": "string",
+          "description": "Template for the resource ID. May reference {function}, {unit_id}, {address}, {quantity}, {register_type} using {param} syntax.",
+          "minLength": 1,
+          "examples": [
+            "unit:{unit_id}:{register_type}:{address}",
+            "unit:{unit_id}:addr:{address}:qty:{quantity}"
+          ]
+        }
+      }
+    }
+  }
+}

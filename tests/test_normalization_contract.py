@@ -1,17 +1,18 @@
 """
-Cross-protocol normalization contract tests — Phase 4.
+Cross-protocol normalization contract tests — Phase 5.
 
 These tests prove that:
 1. REST normalized requests serialize to the canonical shape.
 2. BACnet normalized requests serialize to the canonical shape.
-3. Required fields are present for both protocols.
-4. Protocol-specific evidence is nested under "protocol_evidence".
-5. No authorization decision field is present in the output.
-6. No resolved subject identity field is present (only the unverified hint).
-7. No gateway transport code is invoked.
-8. No basis_core import exists anywhere in basis_adapters.
-9. REST and BACnet outputs share exactly the same top-level field set.
-10. Serialization is deterministic.
+3. Modbus normalized requests serialize to the canonical shape.
+4. Required fields are present for all three protocols.
+5. Protocol-specific evidence is nested under "protocol_evidence".
+6. No authorization decision field is present in the output.
+7. No resolved subject identity field is present (only the unverified hint).
+8. No gateway transport code is invoked.
+9. No basis_core import exists anywhere in basis_adapters.
+10. REST, BACnet, and Modbus outputs share exactly the same top-level field set.
+11. Serialization is deterministic.
 
 The contract document is: docs/contracts/normalization-contract.md
 The JSON Schema is: schemas/normalized-authorization-request.schema.json
@@ -25,6 +26,8 @@ from typing import Any
 
 from basis_adapters.bacnet.adapter import BacnetAdapter
 from basis_adapters.bacnet.mapping import BacnetMappingConfig, BacnetOperation, BacnetRouteMapping
+from basis_adapters.modbus.adapter import ModbusAdapter
+from basis_adapters.modbus.mapping import ModbusMappingConfig, ModbusOperation, ModbusRouteMapping
 from basis_adapters.models import (
     AdapterContext,
     NormalizedAuthorizationRequest,
@@ -134,6 +137,41 @@ def _bacnet_normalized() -> NormalizedAuthorizationRequest:
     adapter = _bacnet_adapter()
     result = adapter.normalize(_bacnet_operation())
     assert result.success, f"BACnet normalization failed: {result.error}"
+    assert result.request is not None
+    return result.request
+
+
+def _modbus_adapter() -> ModbusAdapter:
+    route = ModbusRouteMapping(
+        function="ReadHoldingRegisters",
+        register_type="holding_register",
+        action="read",
+        resource_type="modbus_register",
+        resource_id_template="unit:{unit_id}:{register_type}:{address}",
+        name="read-holding",
+    )
+    config = ModbusMappingConfig(routes=[route])
+    ctx = AdapterContext(adapter_id="modbus-normalization-test")
+    return ModbusAdapter(mapping=config, context=ctx)
+
+
+def _modbus_operation(subject_hint: str | None = None) -> ModbusOperation:
+    meta: dict[str, Any] = {}
+    if subject_hint is not None:
+        meta["subject_hint"] = subject_hint
+    return ModbusOperation(
+        function="ReadHoldingRegisters",
+        unit_id=1,
+        address=40001,
+        quantity=1,
+        metadata=meta,
+    )
+
+
+def _modbus_normalized() -> NormalizedAuthorizationRequest:
+    adapter = _modbus_adapter()
+    result = adapter.normalize(_modbus_operation())
+    assert result.success, f"Modbus normalization failed: {result.error}"
     assert result.request is not None
     return result.request
 
@@ -283,12 +321,85 @@ class TestBacnetCanonicalShape:
 
 
 # ---------------------------------------------------------------------------
-# 3. REST and BACnet share the same canonical field set
+# 3. Modbus serializes to canonical shape
+# ---------------------------------------------------------------------------
+
+
+class TestModbusCanonicalShape:
+    def test_to_dict_returns_dict(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert isinstance(d, dict)
+
+    def test_top_level_fields_exactly_canonical(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert set(d.keys()) == CANONICAL_FIELDS
+
+    def test_protocol_is_modbus(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert d["protocol"] == "modbus"
+
+    def test_action_is_string(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert isinstance(d["action"], str)
+        assert len(d["action"]) > 0
+
+    def test_resource_type_is_string(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert isinstance(d["resource_type"], str)
+        assert len(d["resource_type"]) > 0
+
+    def test_resource_id_is_string(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert isinstance(d["resource_id"], str)
+        assert len(d["resource_id"]) > 0
+
+    def test_protocol_evidence_present_and_nested(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert "protocol_evidence" in d
+        assert isinstance(d["protocol_evidence"], dict)
+
+    def test_protocol_evidence_fields_exactly_canonical(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert set(d["protocol_evidence"].keys()) == CANONICAL_EVIDENCE_FIELDS
+
+    def test_protocol_evidence_metadata_contains_modbus_fields(self) -> None:
+        d = _modbus_normalized().to_dict()
+        meta = d["protocol_evidence"]["metadata"]
+        assert "unit_id" in meta
+        assert "address" in meta
+        assert "quantity" in meta
+        assert "value_present" in meta
+        assert "function" in meta
+
+    def test_no_forbidden_fields(self) -> None:
+        d = _modbus_normalized().to_dict()
+        present = FORBIDDEN_FIELDS & set(d.keys())
+        assert not present, f"Forbidden fields found in Modbus output: {present}"
+
+    def test_subject_hint_none_when_absent(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert d["subject_hint"] is None
+
+    def test_subject_hint_forwarded_when_present(self) -> None:
+        adapter = _modbus_adapter()
+        result = adapter.normalize(_modbus_operation(subject_hint="operator@example.internal"))
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["subject_hint"] == "operator@example.internal"
+
+    def test_output_is_json_serializable(self) -> None:
+        d = _modbus_normalized().to_dict()
+        encoded = json.dumps(d)
+        assert len(encoded) > 0
+
+
+# ---------------------------------------------------------------------------
+# 4. REST, BACnet, and Modbus share the same canonical field set
 # ---------------------------------------------------------------------------
 
 
 class TestCrossProtocolFieldSetParity:
-    def test_top_level_field_sets_are_identical(self) -> None:
+    def test_rest_bacnet_top_level_field_sets_identical(self) -> None:
         rest_keys = set(_rest_normalized().to_dict().keys())
         bacnet_keys = set(_bacnet_normalized().to_dict().keys())
         rest_only = rest_keys - bacnet_keys
@@ -297,31 +408,45 @@ class TestCrossProtocolFieldSetParity:
             f"Field set mismatch:\n  REST-only: {rest_only}\n  BACnet-only: {bacnet_only}"
         )
 
-    def test_evidence_field_sets_are_identical(self) -> None:
-        rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
-        bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
-        rest_only = rest_ev - bacnet_ev
-        bacnet_only = bacnet_ev - rest_ev
-        assert rest_ev == bacnet_ev, (
-            f"Evidence field set mismatch:\n  REST-only: {rest_only}\n  BACnet-only: {bacnet_only}"
+    def test_rest_modbus_top_level_field_sets_identical(self) -> None:
+        rest_keys = set(_rest_normalized().to_dict().keys())
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        rest_only = rest_keys - modbus_keys
+        modbus_only = modbus_keys - rest_keys
+        assert rest_keys == modbus_keys, (
+            f"Field set mismatch:\n  REST-only: {rest_only}\n  Modbus-only: {modbus_only}"
         )
 
-    def test_both_protocols_have_correct_protocol_field(self) -> None:
+    def test_bacnet_modbus_top_level_field_sets_identical(self) -> None:
+        bacnet_keys = set(_bacnet_normalized().to_dict().keys())
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        bacnet_only = bacnet_keys - modbus_keys
+        modbus_only = modbus_keys - bacnet_keys
+        assert bacnet_keys == modbus_keys, (
+            f"Field set mismatch:\n  BACnet-only: {bacnet_only}\n  Modbus-only: {modbus_only}"
+        )
+
+    def test_all_three_evidence_field_sets_identical(self) -> None:
+        rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
+        bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
+        modbus_ev = set(_modbus_normalized().to_dict()["protocol_evidence"].keys())
+        assert rest_ev == bacnet_ev == modbus_ev, (
+            f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, Modbus={modbus_ev}"
+        )
+
+    def test_all_protocols_have_correct_protocol_field(self) -> None:
         assert _rest_normalized().to_dict()["protocol"] == "rest"
         assert _bacnet_normalized().to_dict()["protocol"] == "bacnet"
+        assert _modbus_normalized().to_dict()["protocol"] == "modbus"
 
-    def test_both_protocols_produce_same_action_for_read(self) -> None:
-        # Both adapters are configured to produce "read" for their respective read operations.
+    def test_all_protocols_produce_read_action_for_read_operations(self) -> None:
         assert _rest_normalized().to_dict()["action"] == "read"
         assert _bacnet_normalized().to_dict()["action"] == "read"
-
-    def test_both_protocols_produce_same_resource_type(self) -> None:
-        assert _rest_normalized().to_dict()["resource_type"] == "point"
-        assert _bacnet_normalized().to_dict()["resource_type"] == "point"
+        assert _modbus_normalized().to_dict()["action"] == "read"
 
 
 # ---------------------------------------------------------------------------
-# 4. Serialization is deterministic
+# 5. Serialization is deterministic
 # ---------------------------------------------------------------------------
 
 
@@ -334,6 +459,10 @@ class TestSerializationDeterminism:
         r = _bacnet_normalized()
         assert r.to_dict() == r.to_dict()
 
+    def test_modbus_deterministic_across_calls(self) -> None:
+        r = _modbus_normalized()
+        assert r.to_dict() == r.to_dict()
+
     def test_rest_deterministic_across_instances(self) -> None:
         r1 = _rest_normalized()
         r2 = _rest_normalized()
@@ -344,9 +473,14 @@ class TestSerializationDeterminism:
         r2 = _bacnet_normalized()
         assert r1.to_dict() == r2.to_dict()
 
+    def test_modbus_deterministic_across_instances(self) -> None:
+        r1 = _modbus_normalized()
+        r2 = _modbus_normalized()
+        assert r1.to_dict() == r2.to_dict()
+
 
 # ---------------------------------------------------------------------------
-# 5. Isolation — no basis_core import, no gateway transport
+# 6. Isolation — no basis_core import, no gateway transport
 # ---------------------------------------------------------------------------
 
 
@@ -395,6 +529,7 @@ class TestAdapterIsolation:
         try:
             _rest_normalized().to_dict()
             _bacnet_normalized().to_dict()
+            _modbus_normalized().to_dict()
         finally:
             socket.getaddrinfo = original_getaddrinfo  # type: ignore[method-assign]
 
@@ -402,7 +537,7 @@ class TestAdapterIsolation:
 
 
 # ---------------------------------------------------------------------------
-# 6. Protocol evidence is always present in serialized output
+# 7. Protocol evidence is always present in serialized output
 # ---------------------------------------------------------------------------
 
 
@@ -427,3 +562,15 @@ class TestProtocolEvidencePresence:
         """REST evidence path must not contain a query string."""
         d = _rest_normalized().to_dict()
         assert "?" not in d["protocol_evidence"]["path"]
+
+    def test_modbus_evidence_protocol_matches_parent(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert d["protocol_evidence"]["protocol"] == d["protocol"]
+
+    def test_modbus_evidence_method_is_function_name(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert d["protocol_evidence"]["method"] == "ReadHoldingRegisters"
+
+    def test_modbus_evidence_path_encodes_unit_and_address(self) -> None:
+        d = _modbus_normalized().to_dict()
+        assert d["protocol_evidence"]["path"] == "unit:1:addr:40001"
