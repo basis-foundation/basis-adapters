@@ -37,6 +37,20 @@ class ProtocolOperation:
     path: str
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialize to a JSON-compatible dictionary.
+
+        All values in ``metadata`` must already be JSON-compatible (str, int,
+        float, bool, None, list, or dict). No type coercion is performed.
+        """
+        return {
+            "protocol": self.protocol,
+            "method": self.method,
+            "path": self.path,
+            "metadata": dict(self.metadata),
+        }
+
 
 @dataclass(frozen=True)
 class NormalizedAuthorizationRequest:
@@ -62,6 +76,31 @@ class NormalizedAuthorizationRequest:
     protocol: str
     protocol_evidence: ProtocolOperation
     subject_hint: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialize to a JSON-compatible dictionary suitable for handoff to an
+        enforcement boundary.
+
+        The output shape is the canonical normalized authorization request
+        format defined in schemas/normalized-authorization-request.schema.json.
+
+        Invariants:
+        - Output is deterministic: same input always produces identical output.
+        - No authorization decision is included.
+        - No resolved subject identity is included; ``subject_hint`` carries
+          only the unverified hint forwarded from the protocol layer.
+        - Protocol evidence is always present and nested under
+          ``"protocol_evidence"``.
+        """
+        return {
+            "protocol": self.protocol,
+            "action": self.action,
+            "resource_type": self.resource_type,
+            "resource_id": self.resource_id,
+            "protocol_evidence": self.protocol_evidence.to_dict(),
+            "subject_hint": self.subject_hint,
+        }
 
 
 @dataclass(frozen=True)

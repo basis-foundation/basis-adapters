@@ -31,10 +31,11 @@ Adapters never see the decision. They do not allow or deny anything.
 
 ## Current Status
 
-**Phase 3 — BACnet Adapter Skeleton (current)**
+**Phase 4 — Cross-Protocol Normalization Contract (current)**
 
-The BACnet adapter normalizes BACnet service primitives into BASIS authorization
-requests. No BACnet/IP stack or bacpypes — pure normalization.
+REST and BACnet adapters now share a documented, tested, and schema-backed
+normalized output contract. The handoff artifact is stable before Modbus or
+any additional protocol is added.
 
 What exists:
 
@@ -44,19 +45,27 @@ What exists:
 - BACnet adapter: service + object type + property → normalized authorization request
 - JSON Schema for REST mapping config (`schemas/rest-mapping.schema.json`)
 - JSON Schema for BACnet mapping config (`schemas/bacnet-mapping.schema.json`)
+- **JSON Schema for normalized authorization request** (`schemas/normalized-authorization-request.schema.json`)
+- **Cross-protocol normalization contract** (`docs/contracts/normalization-contract.md`)
+- **`NormalizedAuthorizationRequest.to_dict()`** — deterministic, JSON-compatible serialization
+- **Example handoff payloads** (`examples/handoff/`) for REST and BACnet
 - Canonical adapter contract documentation (`docs/contracts/adapter-contract.md`)
 - BACnet architecture documentation (`docs/architecture/bacnet-adapter.md`)
-- Full test suite (REST + BACnet), ruff, mypy strict
+- Full test suite (REST + BACnet + cross-protocol contract), ruff, mypy strict
 
 **Fail-closed contract:** if `result.success is False`, the caller must not forward
 the operation. A normalization failure is not an authorization decision — treat it
 as deny-by-default.
 
+**Phase 4 is not a gateway client or transport implementation.** `to_dict()` produces
+the canonical handoff artifact. Submitting it to a gateway is the enforcement
+boundary's responsibility, not the adapter's.
+
 What does not exist yet:
 
 - Running proxy server
 - Gateway HTTP client
-- Modbus adapter
+- Modbus adapter (Phase 5)
 - Docker / Kubernetes / CI configuration
 - Integration tests against a live gateway
 

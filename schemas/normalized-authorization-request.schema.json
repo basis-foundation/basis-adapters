@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12",
+  "$id": "https://basis-foundation.example/schemas/normalized-authorization-request.schema.json",
+  "title": "NormalizedAuthorizationRequest",
+  "description": "Canonical serialized form of a normalized authorization request produced by a basis-adapters adapter. This is a handoff artifact: it is not a decision, not enforcement, and not authentication.",
+  "type": "object",
+  "required": ["protocol", "action", "resource_type", "resource_id", "protocol_evidence"],
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "description": "Originating protocol identifier, e.g. 'rest' or 'bacnet'.",
+      "examples": ["rest", "bacnet"]
+    },
+    "action": {
+      "type": "string",
+      "description": "Normalized action verb describing what the caller is attempting to do.",
+      "enum": ["read", "write", "control", "discover", "subscribe"]
+    },
+    "resource_type": {
+      "type": "string",
+      "description": "Logical resource category, e.g. 'point', 'device', 'schedule'.",
+      "minLength": 1,
+      "examples": ["point", "device", "schedule"]
+    },
+    "resource_id": {
+      "type": "string",
+      "description": "Stable identifier for the target resource, rendered from the adapter's resource_id_template.",
+      "minLength": 1,
+      "examples": ["device-42/point/analogInput:1:presentValue", "devices/ahu-1/points/supply-temp"]
+    },
+    "protocol_evidence": {
+      "type": "object",
+      "description": "The original protocol operation, preserved verbatim for audit. Always present. Structure varies by protocol.",
+      "required": ["protocol", "method", "path", "metadata"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "description": "Protocol that produced this evidence. Matches the parent 'protocol' field.",
+          "examples": ["rest", "bacnet"]
+        },
+        "method": {
+          "type": "string",
+          "description": "Protocol method or service name, e.g. 'GET', 'ReadProperty'.",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "description": "Resource path or address in protocol-native form. For REST: the request path with query string stripped. For BACnet: '{object_type}:{object_instance}:{property_identifier}'.",
+          "minLength": 1
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional protocol-specific fields. For REST: may include subject_hint and HTTP-level fields. For BACnet: includes service, object_type, object_instance, property_identifier, device_id, priority, value_present.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "subject_hint": {
+      "type": ["string", "null"],
+      "description": "Unverified identity hint forwarded from the protocol layer. The enforcement boundary is responsible for authenticating and verifying this hint. Null if no hint was present."
+    }
+  }
+}
