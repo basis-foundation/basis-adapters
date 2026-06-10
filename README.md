@@ -31,11 +31,12 @@ Adapters never see the decision. They do not allow or deny anything.
 
 ## Current Status
 
-**Phase 4 — Cross-Protocol Normalization Contract (current)**
+**Phase 5 — Modbus Adapter Skeleton (current)**
 
-REST and BACnet adapters now share a documented, tested, and schema-backed
-normalized output contract. The handoff artifact is stable before Modbus or
-any additional protocol is added.
+Modbus is the third adapter, joining REST and BACnet. All three now participate
+in the cross-protocol normalization contract. The contract is proven stable
+across a resource-oriented protocol (REST), an object-property protocol
+(BACnet), and a register-oriented protocol (Modbus).
 
 What exists:
 
@@ -43,29 +44,31 @@ What exists:
 - Error hierarchy: `AdapterError`, `InvalidMappingError`, `UnknownRouteError`
 - REST adapter: HTTP method + path → normalized authorization request
 - BACnet adapter: service + object type + property → normalized authorization request
+- **Modbus adapter**: function + unit/address → normalized authorization request
 - JSON Schema for REST mapping config (`schemas/rest-mapping.schema.json`)
 - JSON Schema for BACnet mapping config (`schemas/bacnet-mapping.schema.json`)
-- **JSON Schema for normalized authorization request** (`schemas/normalized-authorization-request.schema.json`)
-- **Cross-protocol normalization contract** (`docs/contracts/normalization-contract.md`)
-- **`NormalizedAuthorizationRequest.to_dict()`** — deterministic, JSON-compatible serialization
-- **Example handoff payloads** (`examples/handoff/`) for REST and BACnet
+- **JSON Schema for Modbus mapping config** (`schemas/modbus-mapping.schema.json`)
+- JSON Schema for normalized authorization request (`schemas/normalized-authorization-request.schema.json`)
+- Cross-protocol normalization contract (`docs/contracts/normalization-contract.md`)
+- `NormalizedAuthorizationRequest.to_dict()` — deterministic, JSON-compatible serialization
+- Example handoff payloads (`examples/handoff/`) for REST, BACnet, and Modbus
 - Canonical adapter contract documentation (`docs/contracts/adapter-contract.md`)
-- BACnet architecture documentation (`docs/architecture/bacnet-adapter.md`)
-- Full test suite (REST + BACnet + cross-protocol contract), ruff, mypy strict
+- BACnet and Modbus architecture documentation (`docs/architecture/`)
+- Full test suite (REST + BACnet + Modbus + cross-protocol contract), ruff, mypy strict
 
 **Fail-closed contract:** if `result.success is False`, the caller must not forward
 the operation. A normalization failure is not an authorization decision — treat it
 as deny-by-default.
 
-**Phase 4 is not a gateway client or transport implementation.** `to_dict()` produces
-the canonical handoff artifact. Submitting it to a gateway is the enforcement
-boundary's responsibility, not the adapter's.
+**No live Modbus TCP.** The Modbus adapter models normalized intent only. No
+pymodbus, no TCP sockets, no packet parsing. Live communication belongs in the
+enforcement boundary that embeds this adapter.
 
 What does not exist yet:
 
 - Running proxy server
 - Gateway HTTP client
-- Modbus adapter (Phase 5)
+- Modbus contract hardening (Phase 6)
 - Docker / Kubernetes / CI configuration
 - Integration tests against a live gateway
 
@@ -114,6 +117,45 @@ if result.success:
     # Submit req to basis-gateway
     print(f"action={req.action} resource_type={req.resource_type} resource_id={req.resource_id}")
     # action=read resource_type=sensor resource_id=analogInput:1
+else:
+    print(f"Normalization failed: {result.error}")
+    # Fail closed — do not forward the operation
+```
+
+---
+
+## Modbus Adapter
+
+Modbus uses numeric function codes, unit IDs, and register addresses. The Modbus
+adapter maps these to BASIS authorization semantics via a route config matching
+on function code and register type.
+
+```python
+from basis_adapters.models import AdapterContext
+from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
+
+import json
+
+with open("examples/modbus/mapping.example.json") as f:
+    config = ModbusMappingConfig.from_dict(json.load(f))
+
+ctx = AdapterContext(adapter_id="modbus-primary")
+adapter = ModbusAdapter(mapping=config, context=ctx)
+
+op = ModbusOperation(
+    function="ReadHoldingRegisters",
+    unit_id=1,
+    address=40001,
+    quantity=1,
+)
+
+result = adapter.normalize(op)
+
+if result.success:
+    req = result.request
+    # Submit req to basis-gateway
+    print(f"action={req.action} resource_type={req.resource_type} resource_id={req.resource_id}")
+    # action=read resource_type=modbus_register resource_id=unit:1:holding_register:40001
 else:
     print(f"Normalization failed: {result.error}")
     # Fail closed — do not forward the operation

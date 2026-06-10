@@ -1,0 +1,23 @@
+{
+  "_comment": "Example handoff payload: Modbus adapter normalized request. Produced by ModbusAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). This is a handoff artifact — not a decision, not enforcement, not authentication.",
+  "protocol": "modbus",
+  "action": "read",
+  "resource_type": "modbus_register",
+  "resource_id": "unit:1:holding_register:40001",
+  "protocol_evidence": {
+    "protocol": "modbus",
+    "method": "ReadHoldingRegisters",
+    "path": "unit:1:addr:40001",
+    "metadata": {
+      "function": "ReadHoldingRegisters",
+      "unit_id": 1,
+      "address": 40001,
+      "quantity": 1,
+      "value_present": false,
+      "register_type": null,
+      "source_address": null,
+      "transaction_id": null
+    }
+  },
+  "subject_hint": null
+}

@@ -1,0 +1,69 @@
+{
+  "_comment": "Example Modbus adapter mapping configuration. Routes are evaluated in order; the first match wins. Use '*' as a wildcard for function or register_type.",
+  "routes": [
+    {
+      "name": "read-holding-registers",
+      "function": "ReadHoldingRegisters",
+      "register_type": "holding_register",
+      "action": "read",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "name": "read-input-registers",
+      "function": "ReadInputRegisters",
+      "register_type": "input_register",
+      "action": "read",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "name": "read-coils",
+      "function": "ReadCoils",
+      "register_type": "coil",
+      "action": "read",
+      "resource_type": "modbus_coil",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "name": "read-discrete-inputs",
+      "function": "ReadDiscreteInputs",
+      "register_type": "discrete_input",
+      "action": "read",
+      "resource_type": "modbus_coil",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "name": "write-single-register",
+      "function": "WriteSingleRegister",
+      "register_type": "holding_register",
+      "action": "write",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "name": "write-multiple-registers",
+      "function": "WriteMultipleRegisters",
+      "register_type": "holding_register",
+      "action": "write",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "name": "write-single-coil",
+      "function": "WriteSingleCoil",
+      "register_type": "coil",
+      "action": "write",
+      "resource_type": "modbus_coil",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "name": "write-multiple-coils",
+      "function": "WriteMultipleCoils",
+      "register_type": "coil",
+      "action": "write",
+      "resource_type": "modbus_coil",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    }
+  ]
+}
