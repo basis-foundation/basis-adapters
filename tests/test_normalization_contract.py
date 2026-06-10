@@ -1,5 +1,5 @@
 """
-Cross-protocol normalization contract tests — Phases 5, 7, 10, and 11.
+Cross-protocol normalization contract tests — Phases 5, 7, 10, 11, and 12.
 
 These tests prove that:
 1. REST normalized requests serialize to the canonical shape.
@@ -8,15 +8,16 @@ These tests prove that:
 4. OPC UA normalized requests serialize to the canonical shape.
 5. MQTT normalized requests serialize to the canonical shape.
 6. DNP3 normalized requests serialize to the canonical shape.
-7. Required fields are present for all six protocols.
-8. Protocol-specific evidence is nested under "protocol_evidence".
-9. No authorization decision field is present in the output.
-10. No resolved subject identity field is present (only the unverified hint).
-11. No gateway transport code is invoked.
-12. No basis_core import exists anywhere in basis_adapters.
-13. REST, BACnet, Modbus, OPC UA, MQTT, and DNP3 outputs share exactly the
-    same top-level field set.
-14. Serialization is deterministic.
+7. IEC 61850 normalized requests serialize to the canonical shape.
+8. Required fields are present for all seven protocols.
+9. Protocol-specific evidence is nested under "protocol_evidence".
+10. No authorization decision field is present in the output.
+11. No resolved subject identity field is present (only the unverified hint).
+12. No gateway transport code is invoked.
+13. No basis_core import exists anywhere in basis_adapters.
+14. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, and IEC 61850 outputs share
+    exactly the same top-level field set.
+15. Serialization is deterministic.
 
 The contract document is: docs/contracts/normalization-contract.md
 The JSON Schema is: schemas/normalized-authorization-request.schema.json
@@ -32,6 +33,12 @@ from basis_adapters.bacnet.adapter import BacnetAdapter
 from basis_adapters.bacnet.mapping import BacnetMappingConfig, BacnetOperation, BacnetRouteMapping
 from basis_adapters.dnp3.adapter import Dnp3Adapter
 from basis_adapters.dnp3.mapping import Dnp3MappingConfig, Dnp3Operation, Dnp3RouteMapping
+from basis_adapters.iec61850.adapter import Iec61850Adapter
+from basis_adapters.iec61850.mapping import (
+    Iec61850MappingConfig,
+    Iec61850Operation,
+    Iec61850RouteMapping,
+)
 from basis_adapters.modbus.adapter import ModbusAdapter
 from basis_adapters.modbus.mapping import ModbusMappingConfig, ModbusOperation, ModbusRouteMapping
 from basis_adapters.models import (
@@ -294,6 +301,49 @@ def _dnp3_normalized() -> NormalizedAuthorizationRequest:
     adapter = _dnp3_adapter()
     result = adapter.normalize(_dnp3_operation())
     assert result.success, f"DNP3 normalization failed: {result.error}"
+    assert result.request is not None
+    return result.request
+
+
+def _iec61850_adapter() -> Iec61850Adapter:
+    route = Iec61850RouteMapping(
+        operation="READ",
+        logical_node="MMXU1",
+        action="read",
+        resource_type="iec61850_data_attribute",
+        resource_id_template=(
+            "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}"
+            "/do:{data_object}/da:{data_attribute}"
+        ),
+        name="read-data-attribute",
+    )
+    config = Iec61850MappingConfig(routes=[route])
+    ctx = AdapterContext(adapter_id="iec61850-normalization-test")
+    return Iec61850Adapter(mapping=config, context=ctx)
+
+
+def _iec61850_operation(subject_hint: str | None = None) -> Iec61850Operation:
+    meta: dict[str, Any] = {}
+    if subject_hint is not None:
+        meta["subject_hint"] = subject_hint
+    return Iec61850Operation(
+        operation="READ",
+        ied_name="ied-sub1",
+        logical_device="MEAS",
+        logical_node="MMXU1",
+        data_object="TotW",
+        data_attribute="mag",
+        functional_constraint="MX",
+        quality="good",
+        timestamp="2026-06-10T14:30:00Z",
+        metadata=meta,
+    )
+
+
+def _iec61850_normalized() -> NormalizedAuthorizationRequest:
+    adapter = _iec61850_adapter()
+    result = adapter.normalize(_iec61850_operation())
+    assert result.success, f"IEC 61850 normalization failed: {result.error}"
     assert result.request is not None
     return result.request
 
@@ -746,7 +796,92 @@ class TestDnp3CanonicalShape:
 
 
 # ---------------------------------------------------------------------------
-# 6. REST, BACnet, Modbus, OPC UA, MQTT, and DNP3 share the same canonical field set
+# 7. IEC 61850 serializes to canonical shape
+# ---------------------------------------------------------------------------
+
+
+class TestIec61850CanonicalShape:
+    def test_to_dict_returns_dict(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert isinstance(d, dict)
+
+    def test_top_level_fields_exactly_canonical(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert set(d.keys()) == CANONICAL_FIELDS
+
+    def test_protocol_is_iec61850(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert d["protocol"] == "iec61850"
+
+    def test_read_action_is_read(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert d["action"] == "read"
+
+    def test_resource_type_is_string(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert isinstance(d["resource_type"], str)
+        assert len(d["resource_type"]) > 0
+
+    def test_resource_id_is_string(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert isinstance(d["resource_id"], str)
+        assert len(d["resource_id"]) > 0
+
+    def test_protocol_evidence_present_and_nested(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert "protocol_evidence" in d
+        assert isinstance(d["protocol_evidence"], dict)
+
+    def test_protocol_evidence_fields_exactly_canonical(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert set(d["protocol_evidence"].keys()) == CANONICAL_EVIDENCE_FIELDS
+
+    def test_protocol_evidence_metadata_contains_iec61850_fields(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        meta = d["protocol_evidence"]["metadata"]
+        assert "operation" in meta
+        assert "ied_name" in meta
+        assert "logical_device" in meta
+        assert "logical_node" in meta
+        assert "data_object" in meta
+        assert "data_attribute" in meta
+        assert "functional_constraint" in meta
+        assert "dataset" in meta
+        assert "report_control_block" in meta
+        assert "goose_control_block" in meta
+        assert "sampled_values_control_block" in meta
+        assert "control_model" in meta
+        assert "origin" in meta
+        assert "cause" in meta
+        assert "quality" in meta
+        assert "timestamp" in meta
+        assert "value" in meta
+
+    def test_no_forbidden_fields(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        present = FORBIDDEN_FIELDS & set(d.keys())
+        assert not present, f"Forbidden fields found in IEC 61850 output: {present}"
+
+    def test_subject_hint_none_when_absent(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert d["subject_hint"] is None
+
+    def test_subject_hint_forwarded_when_present(self) -> None:
+        adapter = _iec61850_adapter()
+        result = adapter.normalize(_iec61850_operation(subject_hint="operator@example.internal"))
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["subject_hint"] == "operator@example.internal"
+
+    def test_output_is_json_serializable(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        encoded = json.dumps(d)
+        assert len(encoded) > 0
+
+
+# ---------------------------------------------------------------------------
+# 6. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, and IEC 61850 share the same
+#    canonical field set
 # ---------------------------------------------------------------------------
 
 
@@ -886,16 +1021,72 @@ class TestCrossProtocolFieldSetParity:
             f"Field set mismatch:\n  DNP3-only: {dnp3_only}\n  MQTT-only: {mqtt_only}"
         )
 
-    def test_all_six_evidence_field_sets_identical(self) -> None:
+    def test_iec61850_rest_top_level_field_sets_identical(self) -> None:
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        rest_keys = set(_rest_normalized().to_dict().keys())
+        iec61850_only = iec61850_keys - rest_keys
+        rest_only = rest_keys - iec61850_keys
+        assert iec61850_keys == rest_keys, (
+            f"Field set mismatch:\n  IEC 61850-only: {iec61850_only}\n  REST-only: {rest_only}"
+        )
+
+    def test_iec61850_bacnet_top_level_field_sets_identical(self) -> None:
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        bacnet_keys = set(_bacnet_normalized().to_dict().keys())
+        iec61850_only = iec61850_keys - bacnet_keys
+        bacnet_only = bacnet_keys - iec61850_keys
+        assert iec61850_keys == bacnet_keys, (
+            f"Field set mismatch:\n  IEC 61850-only: {iec61850_only}\n  BACnet-only: {bacnet_only}"
+        )
+
+    def test_iec61850_modbus_top_level_field_sets_identical(self) -> None:
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        iec61850_only = iec61850_keys - modbus_keys
+        modbus_only = modbus_keys - iec61850_keys
+        assert iec61850_keys == modbus_keys, (
+            f"Field set mismatch:\n  IEC 61850-only: {iec61850_only}\n  Modbus-only: {modbus_only}"
+        )
+
+    def test_iec61850_opcua_top_level_field_sets_identical(self) -> None:
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        iec61850_only = iec61850_keys - opcua_keys
+        opcua_only = opcua_keys - iec61850_keys
+        assert iec61850_keys == opcua_keys, (
+            f"Field set mismatch:\n  IEC 61850-only: {iec61850_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_iec61850_mqtt_top_level_field_sets_identical(self) -> None:
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        iec61850_only = iec61850_keys - mqtt_keys
+        mqtt_only = mqtt_keys - iec61850_keys
+        assert iec61850_keys == mqtt_keys, (
+            f"Field set mismatch:\n  IEC 61850-only: {iec61850_only}\n  MQTT-only: {mqtt_only}"
+        )
+
+    def test_iec61850_dnp3_top_level_field_sets_identical(self) -> None:
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        iec61850_only = iec61850_keys - dnp3_keys
+        dnp3_only = dnp3_keys - iec61850_keys
+        assert iec61850_keys == dnp3_keys, (
+            f"Field set mismatch:\n  IEC 61850-only: {iec61850_only}\n  DNP3-only: {dnp3_only}"
+        )
+
+    def test_all_seven_evidence_field_sets_identical(self) -> None:
         rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
         bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
         modbus_ev = set(_modbus_normalized().to_dict()["protocol_evidence"].keys())
         opcua_ev = set(_opcua_normalized().to_dict()["protocol_evidence"].keys())
         mqtt_ev = set(_mqtt_normalized().to_dict()["protocol_evidence"].keys())
         dnp3_ev = set(_dnp3_normalized().to_dict()["protocol_evidence"].keys())
-        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev == mqtt_ev == dnp3_ev, (
+        iec61850_ev = set(_iec61850_normalized().to_dict()["protocol_evidence"].keys())
+        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev == mqtt_ev == dnp3_ev == iec61850_ev, (
             f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, "
-            f"Modbus={modbus_ev}, OPC UA={opcua_ev}, MQTT={mqtt_ev}, DNP3={dnp3_ev}"
+            f"Modbus={modbus_ev}, OPC UA={opcua_ev}, MQTT={mqtt_ev}, DNP3={dnp3_ev}, "
+            f"IEC 61850={iec61850_ev}"
         )
 
     def test_all_protocols_have_correct_protocol_field(self) -> None:
@@ -905,6 +1096,7 @@ class TestCrossProtocolFieldSetParity:
         assert _opcua_normalized().to_dict()["protocol"] == "opcua"
         assert _mqtt_normalized().to_dict()["protocol"] == "mqtt"
         assert _dnp3_normalized().to_dict()["protocol"] == "dnp3"
+        assert _iec61850_normalized().to_dict()["protocol"] == "iec61850"
 
     def test_all_protocols_produce_read_action_for_read_operations(self) -> None:
         assert _rest_normalized().to_dict()["action"] == "read"
@@ -912,6 +1104,7 @@ class TestCrossProtocolFieldSetParity:
         assert _modbus_normalized().to_dict()["action"] == "read"
         assert _opcua_normalized().to_dict()["action"] == "read"
         assert _dnp3_normalized().to_dict()["action"] == "read"
+        assert _iec61850_normalized().to_dict()["action"] == "read"
 
 
 # ---------------------------------------------------------------------------
@@ -974,6 +1167,15 @@ class TestSerializationDeterminism:
         r2 = _dnp3_normalized()
         assert r1.to_dict() == r2.to_dict()
 
+    def test_iec61850_deterministic_across_calls(self) -> None:
+        r = _iec61850_normalized()
+        assert r.to_dict() == r.to_dict()
+
+    def test_iec61850_deterministic_across_instances(self) -> None:
+        r1 = _iec61850_normalized()
+        r2 = _iec61850_normalized()
+        assert r1.to_dict() == r2.to_dict()
+
 
 # ---------------------------------------------------------------------------
 # 7. Isolation — no basis_core import, no gateway transport
@@ -1029,6 +1231,7 @@ class TestAdapterIsolation:
             _opcua_normalized().to_dict()
             _mqtt_normalized().to_dict()
             _dnp3_normalized().to_dict()
+            _iec61850_normalized().to_dict()
         finally:
             socket.getaddrinfo = original_getaddrinfo  # type: ignore[method-assign]
 
@@ -1109,3 +1312,15 @@ class TestProtocolEvidencePresence:
     def test_dnp3_evidence_path_encodes_outstation_and_point(self) -> None:
         d = _dnp3_normalized().to_dict()
         assert d["protocol_evidence"]["path"] == "outstation:os-14/analog_input/3"
+
+    def test_iec61850_evidence_protocol_matches_parent(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert d["protocol_evidence"]["protocol"] == d["protocol"]
+
+    def test_iec61850_evidence_method_is_operation_name(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert d["protocol_evidence"]["method"] == "READ"
+
+    def test_iec61850_evidence_path_encodes_hierarchy(self) -> None:
+        d = _iec61850_normalized().to_dict()
+        assert d["protocol_evidence"]["path"] == "ied:ied-sub1/ld:MEAS/ln:MMXU1/do:TotW/da:mag"

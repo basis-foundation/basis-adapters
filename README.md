@@ -47,16 +47,18 @@ Adapters never see the decision. They do not allow or deny anything.
 | OPC UA | `basis_adapters.opcua` | Normalization-complete |
 | MQTT | `basis_adapters.mqtt` | Normalization-complete |
 | DNP3 | `basis_adapters.dnp3` | Normalization-complete |
+| IEC 61850 | `basis_adapters.iec61850` | Normalization-complete |
 
 **Normalization-complete** means the adapter's normalization model and
 architecture are implemented, contract-tested, and stable: it accepts typed
 protocol operations and emits the canonical normalized request shape. It does
 **not** mean a full wire-protocol implementation — there is no BACnet/IP stack,
 no Modbus TCP parser, no OPC UA secure channel, no MQTT broker or client, no
-DNP3 master or outstation, no live networking of any kind. Adapters model
-protocol intent, not wire format.
+DNP3 master or outstation, no IEC 61850 MMS stack or GOOSE/Sampled Values
+processor, no live networking of any kind. Adapters model protocol intent,
+not wire format.
 
-All six adapters emit the same canonical normalized request shape, defined in
+All seven adapters emit the same canonical normalized request shape, defined in
 [`schemas/normalized-authorization-request.schema.json`](schemas/normalized-authorization-request.schema.json)
 and proven by cross-protocol contract tests.
 
@@ -66,7 +68,8 @@ Protocols do not converge. Outputs converge.
 
 REST stays resource-oriented, BACnet stays object-oriented, Modbus stays
 register-oriented, OPC UA keeps its typed address space, MQTT stays
-topic-addressed pub/sub, DNP3 keeps its master/outstation object model —
+topic-addressed pub/sub, DNP3 keeps its master/outstation object model,
+IEC 61850 keeps its hierarchical IED/logical-node semantic model —
 adapters do not paper over those differences on the input side. What converges is the output: every
 adapter emits the same Normalized Authorization Request, and that normalized
 request is the architectural invariant the rest of BASIS builds on. See
@@ -82,10 +85,10 @@ Completed adapters (normalization-complete):
 - OPC UA
 - MQTT
 - DNP3
+- IEC 61850
 
 Planned adapters:
 
-- IEC 61850
 - KNX
 - Niagara
 
@@ -97,8 +100,9 @@ and each must conform to the canonical normalized request shape (see
 
 - Translate protocol operations (HTTP requests, BACnet service primitives, Modbus
   function requests, OPC UA service requests, MQTT publish/subscribe intents, DNP3
-  read/control intents) into protocol-agnostic authorization requests via
-  declarative, validated mapping configs.
+  read/control intents, IEC 61850 read/write/control/reporting intents) into
+  protocol-agnostic authorization requests via declarative, validated mapping
+  configs.
 - Preserve the original operation verbatim as `protocol_evidence` for audit.
 - **Fail closed**: if normalization fails (`result.success is False`), the caller
   must not forward the operation. A normalization failure is not an authorization
@@ -153,9 +157,10 @@ else:
     print(f"Normalization failed: {result.error}")
 ```
 
-BACnet, Modbus, OPC UA, MQTT, and DNP3 follow the identical pattern — see the
-package docstrings (`basis_adapters.bacnet`, `basis_adapters.modbus`,
-`basis_adapters.opcua`, `basis_adapters.mqtt`, `basis_adapters.dnp3`) and
+BACnet, Modbus, OPC UA, MQTT, DNP3, and IEC 61850 follow the identical
+pattern — see the package docstrings (`basis_adapters.bacnet`,
+`basis_adapters.modbus`, `basis_adapters.opcua`, `basis_adapters.mqtt`,
+`basis_adapters.dnp3`, `basis_adapters.iec61850`) and
 [docs/examples.md](docs/examples.md).
 
 ---
@@ -196,7 +201,7 @@ and on pushes to `main`. CI type-checks `src` only — the configured gate.
 | Schema/example validation | [docs/schema-validation.md](docs/schema-validation.md) |
 | Development workflow | [docs/development-workflow.md](docs/development-workflow.md) |
 | Release readiness (v0.1.0 gate) | [docs/release-readiness.md](docs/release-readiness.md) |
-| Implementation history (Phases 1–11) | [docs/implementation/](docs/implementation/) |
+| Implementation history (Phases 1–12) | [docs/implementation/](docs/implementation/) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Security policy | [SECURITY.md](SECURITY.md) |
 

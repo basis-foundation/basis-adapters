@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://basis-foundation.example/schemas/iec61850-mapping.schema.json",
+  "title": "Iec61850MappingConfig",
+  "description": "Configuration schema for the IEC 61850 adapter mapping. Describes how IEC 61850 read, write, control, and reporting/GOOSE/Sampled Values intents are normalized into BASIS authorization requests. Routes match on (operation, logical_node); '*' is a wildcard sentinel. Control routes (SELECT, SELECT_WITH_VALUE, OPERATE, DIRECT_OPERATE, CANCEL) must reference {data_object} in their resource_id_template. Control-block routes (ENABLE_REPORTING, ENABLE_GOOSE, ENABLE_SAMPLED_VALUES) must reference their control block template field. Values, quality, timestamps, origin, cause, and control model are never template fields — they remain protocol evidence.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of route mappings. Routes are evaluated in order; the first match wins.",
+      "items": {
+        "$ref": "#/$defs/Iec61850RouteMapping"
+      }
+    }
+  },
+  "$defs": {
+    "Iec61850RouteMapping": {
+      "type": "object",
+      "description": "Maps an IEC 61850 operation and logical node to normalized authorization semantics.",
+      "required": ["operation", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable route name. Must be unique across all routes in the config if non-empty.",
+          "default": ""
+        },
+        "operation": {
+          "type": "string",
+          "description": "IEC 61850 operation to match (protocol-intent name). Use '*' to match any operation.",
+          "enum": ["READ", "WRITE", "SELECT", "SELECT_WITH_VALUE", "OPERATE", "DIRECT_OPERATE", "CANCEL", "ENABLE_REPORTING", "ENABLE_GOOSE", "ENABLE_SAMPLED_VALUES", "*"]
+        },
+        "logical_node": {
+          "type": "string",
+          "description": "Logical node name to match (e.g. 'CSWI1', 'LLN0'), or '*' to match any (including an absent logical node).",
+          "minLength": 1,
+          "default": "*"
+        },
+        "action": {
+          "type": "string",
+          "description": "Normalized action verb. If empty, the default operation→action map is used (READ→read, WRITE→write, SELECT/SELECT_WITH_VALUE/OPERATE/DIRECT_OPERATE/CANCEL→execute, ENABLE_REPORTING/ENABLE_GOOSE/ENABLE_SAMPLED_VALUES→subscribe).",
+          "enum": ["read", "write", "control", "discover", "subscribe", "execute", ""],
+          "default": ""
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Normalized resource category, e.g. 'iec61850_data_object'.",
+          "minLength": 1,
+          "examples": ["iec61850_data_attribute", "iec61850_data_object", "iec61850_control_block"]
+        },
+        "resource_id_template": {
+          "type": "string",
+          "description": "Template for the resource ID. May reference {operation}, {ied_name}, {logical_device}, {logical_node}, {data_object}, {data_attribute}, {functional_constraint}, {dataset}, {report_control_block}, {goose_control_block}, {sampled_values_control_block} using {param} syntax. Control routes must reference {data_object}; control-block routes must reference their control block field. Values, quality, timestamps, origin, cause, and control model are not available as template fields.",
+          "minLength": 1,
+          "examples": [
+            "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}/da:{data_attribute}",
+            "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}",
+            "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/rcb:{report_control_block}",
+            "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/gcb:{goose_control_block}",
+            "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/svcb:{sampled_values_control_block}"
+          ]
+        }
+      }
+    }
+  }
+}

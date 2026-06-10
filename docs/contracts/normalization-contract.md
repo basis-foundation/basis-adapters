@@ -2,14 +2,14 @@
 
 ## Status
 
-Stable — Phase 11
+Stable — Phase 12
 
 ## Overview
 
 Every adapter in `basis-adapters` produces a single output type:
 `NormalizedAuthorizationRequest`. This document defines the canonical shape of
-that output, how REST, BACnet, Modbus, OPC UA, MQTT, and DNP3 all map into it,
-and how an enforcement boundary should consume it.
+that output, how REST, BACnet, Modbus, OPC UA, MQTT, DNP3, and IEC 61850 all
+map into it, and how an enforcement boundary should consume it.
 
 ---
 
@@ -32,7 +32,7 @@ participate in that decision.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`, `"dnp3"`) |
+| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`, `"dnp3"`, `"iec61850"`) |
 | `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`, `"execute"`, `"browse"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
 | `resource_id` | string | yes | Stable identifier for the target resource |
@@ -109,7 +109,18 @@ and `value`. Note that addresses and `master_id` are evidence only — they are
 never treated as verified identity — and command values stay in evidence,
 never in resource IDs.
 
-All six structures are nested under `protocol_evidence` so enforcement boundaries
+**IEC 61850:** `method` is the IEC 61850 operation name (e.g. `READ`,
+`SELECT`, `OPERATE`, `DIRECT_OPERATE`, `ENABLE_REPORTING`). `path` is a
+deterministic IED-rooted address (e.g. `ied:ied-sub1/ld:CTRL/ln:CSWI1/do:Pos`).
+`metadata` carries `operation`, `ied_name`, `logical_device`, `logical_node`,
+`data_object`, `data_attribute`, `functional_constraint`, `dataset`,
+`report_control_block`, `goose_control_block`,
+`sampled_values_control_block`, `control_model`, `origin`, `cause`,
+`quality`, `timestamp`, and `value`. Note that `origin` is evidence only — it
+is never treated as verified identity — and values, quality, timestamps, and
+cause stay in evidence, never in resource IDs.
+
+All seven structures are nested under `protocol_evidence` so enforcement boundaries
 and audit systems can always find protocol-specific detail without it polluting
 the canonical fields.
 
@@ -228,7 +239,43 @@ binary output point 7 with template
 adapter keeps no select/operate state; the control model is preserved in
 evidence.
 
-All six protocols produce the same field set. The canonical shape is
+## How IEC 61850 Maps into the Canonical Shape
+
+```
+IEC 61850 operation → action (via route action or default operation→action map:
+                   READ→read, WRITE→write, SELECT→execute,
+                   SELECT_WITH_VALUE→execute, OPERATE→execute,
+                   DIRECT_OPERATE→execute, CANCEL→execute,
+                   ENABLE_REPORTING→subscribe, ENABLE_GOOSE→subscribe,
+                   ENABLE_SAMPLED_VALUES→subscribe)
+route.resource_type → resource_type
+resource_id_template rendered with IEC 61850 fields → resource_id
+"iec61850"       → protocol
+Iec61850Operation.to_protocol_operation() → protocol_evidence
+metadata["subject_hint"] → subject_hint
+```
+
+Template fields for IEC 61850: `{operation}`, `{ied_name}`,
+`{logical_device}`, `{logical_node}`, `{data_object}`, `{data_attribute}`,
+`{functional_constraint}`, `{dataset}`, `{report_control_block}`,
+`{goose_control_block}`, `{sampled_values_control_block}`. Optional fields
+are only substitutable when present on the operation. Values, quality,
+timestamps, origin, and cause are never template fields — they remain
+protocol evidence.
+
+Example: a `READ` of data attribute `mag` on data object `TotW` in logical
+node `MMXU1` with template
+`iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}/da:{data_attribute}`
+produces `resource_id = "iec61850:ied:ied-sub1/ld:MEAS/ln:MMXU1/do:TotW/da:mag"`;
+a `DIRECT_OPERATE` of data object `Pos` in switch controller `CSWI1` with
+template
+`iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}`
+produces `resource_id = "iec61850:ied:ied-sub1/ld:CTRL/ln:CSWI1/do:Pos"` and
+`action = "execute"`. SELECT and OPERATE normalize independently — the
+adapter keeps no select/operate state; the control model (ctlModel) is
+preserved in evidence.
+
+All seven protocols produce the same field set. The canonical shape is
 identical; only `protocol` and `protocol_evidence` internals differ.
 
 ---
@@ -322,4 +369,4 @@ Example handoff payloads are in `examples/handoff/`.
 - **`schemas/normalized-authorization-request.schema.json`** — machine-readable
   JSON Schema for the serialized form.
 - **`examples/handoff/`** — concrete example payloads for REST, BACnet,
-  Modbus, OPC UA, MQTT, and DNP3.
+  Modbus, OPC UA, MQTT, DNP3, and IEC 61850.

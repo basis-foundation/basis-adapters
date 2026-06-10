@@ -1,0 +1,35 @@
+{
+  "_comment": "Example handoff payload: IEC 61850 adapter normalized request for a DIRECT_OPERATE intent (source operation: direct operate of data object 'Pos' in switch controller logical node 'CSWI1' on logical device 'CTRL' of IED 'ied-sub1', control model direct-with-normal-security). Produced by Iec61850Adapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). Control semantics normalize to 'execute'. The control model, origin, and command value stay in protocol_evidence — never in the resource ID. This is a handoff artifact — not a decision, not enforcement, not authentication, and not command transmission.",
+  "protocol": "iec61850",
+  "action": "execute",
+  "resource_type": "iec61850_data_object",
+  "resource_id": "iec61850:ied:ied-sub1/ld:CTRL/ln:CSWI1/do:Pos",
+  "protocol_evidence": {
+    "protocol": "iec61850",
+    "method": "DIRECT_OPERATE",
+    "path": "ied:ied-sub1/ld:CTRL/ln:CSWI1/do:Pos",
+    "metadata": {
+      "operation": "DIRECT_OPERATE",
+      "ied_name": "ied-sub1",
+      "logical_device": "CTRL",
+      "logical_node": "CSWI1",
+      "data_object": "Pos",
+      "data_attribute": null,
+      "functional_constraint": "CO",
+      "dataset": null,
+      "report_control_block": null,
+      "goose_control_block": null,
+      "sampled_values_control_block": null,
+      "control_model": "direct_with_normal_security",
+      "origin": {
+        "orCat": "remote-control",
+        "orIdent": "scada-master-1"
+      },
+      "cause": "remote-command",
+      "quality": null,
+      "timestamp": "2026-06-10T14:31:12Z",
+      "value": true
+    }
+  },
+  "subject_hint": null
+}

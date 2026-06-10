@@ -1,0 +1,32 @@
+{
+  "_comment": "Example handoff payload: IEC 61850 adapter normalized request for a READ intent (source operation: read of data attribute 'mag' on data object 'TotW' in logical node 'MMXU1', functional constraint MX, on logical device 'MEAS' of IED 'ied-sub1'). Produced by Iec61850Adapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). The IED/logical device/logical node/data object/data attribute identity, functional constraint, quality, and timestamp stay in protocol_evidence — never as top-level fields. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live IEC 61850 communication.",
+  "protocol": "iec61850",
+  "action": "read",
+  "resource_type": "iec61850_data_attribute",
+  "resource_id": "iec61850:ied:ied-sub1/ld:MEAS/ln:MMXU1/do:TotW/da:mag",
+  "protocol_evidence": {
+    "protocol": "iec61850",
+    "method": "READ",
+    "path": "ied:ied-sub1/ld:MEAS/ln:MMXU1/do:TotW/da:mag",
+    "metadata": {
+      "operation": "READ",
+      "ied_name": "ied-sub1",
+      "logical_device": "MEAS",
+      "logical_node": "MMXU1",
+      "data_object": "TotW",
+      "data_attribute": "mag",
+      "functional_constraint": "MX",
+      "dataset": null,
+      "report_control_block": null,
+      "goose_control_block": null,
+      "sampled_values_control_block": null,
+      "control_model": null,
+      "origin": null,
+      "cause": null,
+      "quality": "good",
+      "timestamp": "2026-06-10T14:30:00Z",
+      "value": null
+    }
+  },
+  "subject_hint": null
+}

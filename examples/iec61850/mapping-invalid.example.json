@@ -1,0 +1,78 @@
+{
+  "_comment": "Intentionally invalid IEC 61850 mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by Iec61850MappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized IEC 61850 operation 'GET_DIRECTORY' — only READ, WRITE, SELECT, SELECT_WITH_VALUE, OPERATE, DIRECT_OPERATE, CANCEL, ENABLE_REPORTING, ENABLE_GOOSE, ENABLE_SAMPLED_VALUES, and '*' are accepted",
+      "name": "bad-operation",
+      "operation": "GET_DIRECTORY",
+      "logical_node": "*",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}"
+    },
+    {
+      "_error": "INVALID: action 'actuate' is not a recognized action verb",
+      "name": "invalid-action",
+      "operation": "DIRECT_OPERATE",
+      "logical_node": "CSWI1",
+      "action": "actuate",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "operation": "READ",
+      "logical_node": "*",
+      "resource_type": "",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {value} — values are evidence, never resource identity",
+      "name": "value-in-template",
+      "operation": "WRITE",
+      "logical_node": "*",
+      "resource_type": "iec61850_data_attribute",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}/da:{data_attribute}/{value}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {quality} — quality is evidence, never resource identity",
+      "name": "quality-in-template",
+      "operation": "READ",
+      "logical_node": "*",
+      "resource_type": "iec61850_data_attribute",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/{quality}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {timestamp} and {origin} — protocol state is evidence, never resource identity",
+      "name": "timestamp-origin-in-template",
+      "operation": "READ",
+      "logical_node": "*",
+      "resource_type": "iec61850_data_attribute",
+      "resource_id_template": "iec61850:ied:{ied_name}/{timestamp}/{origin}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{ied_name' — missing closing brace",
+      "name": "malformed-template",
+      "operation": "READ",
+      "logical_node": "*",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name"
+    },
+    {
+      "_error": "INVALID: control route does not reference {data_object} — control commands must identify the controlled data object",
+      "name": "control-without-data-object",
+      "operation": "OPERATE",
+      "logical_node": "CSWI1",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}"
+    },
+    {
+      "_error": "INVALID: ENABLE_REPORTING route does not reference {report_control_block} — subscription routes must identify the control block",
+      "name": "reporting-without-rcb",
+      "operation": "ENABLE_REPORTING",
+      "logical_node": "*",
+      "resource_type": "iec61850_report_control_block",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}"
+    }
+  ]
+}

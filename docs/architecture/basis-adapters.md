@@ -18,7 +18,8 @@ Adapters do not answer whether the request should be allowed.
 - Protocol-specific parsing: understanding HTTP methods and paths, BACnet object
   identifiers and property references, Modbus function codes and register addresses,
   OPC UA node identifiers and service requests, MQTT topics and publish/subscribe
-  operations, DNP3 object groups, point indexes, and control operations.
+  operations, DNP3 object groups, point indexes, and control operations, IEC 61850
+  IED/logical device/logical node/data object addressing and control models.
 - Normalization: mapping protocol operations to a stable, protocol-agnostic
   authorization request shape (`NormalizedAuthorizationRequest`).
 - Mapping configuration: rules that describe which protocol operations correspond to
@@ -104,10 +105,10 @@ security bypass. Adapters must not receive, inspect, or act on authorization dec
 
 ## Current Protocol Support
 
-Six adapters are implemented and normalization-complete: REST, BACnet, Modbus,
-OPC UA, MQTT, and DNP3. All six emit the canonical Normalized Authorization
-Request shape and participate in the cross-protocol contract tests. Planned
-protocols (IEC 61850, KNX, Niagara) are tracked in the README roadmap.
+Seven adapters are implemented and normalization-complete: REST, BACnet, Modbus,
+OPC UA, MQTT, DNP3, and IEC 61850. All seven emit the canonical Normalized
+Authorization Request shape and participate in the cross-protocol contract
+tests. Planned protocols (KNX, Niagara) are tracked in the README roadmap.
 
 ### REST
 
@@ -159,6 +160,19 @@ and `CONTROL` normalize to `execute` (control commands, not data writes);
 `ENABLE_UNSOLICITED` normalizes to `subscribe`. Select-before-operate is
 normalized statelessly — both steps are authorization-relevant, and the
 control model is preserved as evidence. See [dnp3-adapter.md](dnp3-adapter.md).
+
+### IEC 61850
+
+IEC 61850 is the substation automation standard: a hierarchical, semantic
+object model (IED / logical device / logical node / data object / data
+attribute) with dataset-driven reporting, GOOSE, and Sampled Values. `READ`
+normalizes to `read`, `WRITE` to `write`; `SELECT`, `SELECT_WITH_VALUE`,
+`OPERATE`, `DIRECT_OPERATE`, and `CANCEL` normalize to `execute` (control
+commands, not data writes); `ENABLE_REPORTING`, `ENABLE_GOOSE`, and
+`ENABLE_SAMPLED_VALUES` normalize to `subscribe`. Select-before-operate is
+normalized statelessly — every step is authorization-relevant, and the
+control model (ctlModel) is preserved as evidence. See
+[iec61850-adapter.md](iec61850-adapter.md).
 
 ---
 
