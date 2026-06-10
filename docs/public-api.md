@@ -102,6 +102,24 @@ detail and may change without notice.
 | `VALID_DNP3_POINT_TYPES` | Allowed DNP3 point types (`binary_input`, `binary_output`, `analog_input`, `analog_output`, `counter`, `frozen_counter`). |
 | `VALID_DNP3_TEMPLATE_FIELDS` | Allowed fields in DNP3 resource-ID templates. |
 
+## IEC 61850 (`basis_adapters.iec61850`)
+
+| Name | Purpose |
+|---|---|
+| `Iec61850Adapter` | Normalizes IEC 61850 read/write/control/reporting intents into a `NormalizedAuthorizationRequest`. |
+| `Iec61850MappingConfig` | Validated IEC 61850 mapping configuration; `from_dict()` constructor. Schema: `schemas/iec61850-mapping.schema.json`. |
+| `Iec61850Operation` | Typed IEC 61850 operation (operation, IED/logical device/logical node/data object/data attribute identity, functional constraint, dataset, control block names, control evidence). |
+| `Iec61850RouteMapping` | A single IEC 61850 route mapping entry. |
+| `IEC61850_CONTROL_OPERATIONS` | IEC 61850 operations treated as data-object-specific control commands (`SELECT`, `SELECT_WITH_VALUE`, `OPERATE`, `DIRECT_OPERATE`, `CANCEL`). |
+| `IEC61850_SUBSCRIPTION_OPERATIONS` | IEC 61850 operations treated as control-block subscriptions (`ENABLE_REPORTING`, `ENABLE_GOOSE`, `ENABLE_SAMPLED_VALUES`). |
+| `IEC61850_SBO_CONTROL_MODELS` | Control models declaring select-before-operate semantics. |
+| `IEC61850_DIRECT_CONTROL_MODELS` | Control models declaring direct-operate semantics. |
+| `VALID_IEC61850_ACTIONS` | Normalized action verbs accepted for IEC 61850 routes (shared set plus `execute`). |
+| `VALID_IEC61850_CONTROL_MODELS` | Allowed control models (`status_only`, `direct_with_normal_security`, `sbo_with_normal_security`, `direct_with_enhanced_security`, `sbo_with_enhanced_security`). |
+| `VALID_IEC61850_FUNCTIONAL_CONSTRAINTS` | Allowed functional constraints (`ST`, `MX`, `CO`, `SP`, `CF`, ...). |
+| `VALID_IEC61850_OPERATIONS` | Allowed IEC 61850 operation names (`READ`, `WRITE`, `SELECT`, `SELECT_WITH_VALUE`, `OPERATE`, `DIRECT_OPERATE`, `CANCEL`, `ENABLE_REPORTING`, `ENABLE_GOOSE`, `ENABLE_SAMPLED_VALUES`). |
+| `VALID_IEC61850_TEMPLATE_FIELDS` | Allowed fields in IEC 61850 resource-ID templates. |
+
 ## Serialization Contract
 
 `NormalizedAuthorizationRequest.to_dict()` and `ProtocolOperation.to_dict()` are

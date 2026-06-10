@@ -1,0 +1,85 @@
+{
+  "_comment": "Example IEC 61850 adapter mapping configuration. Routes are evaluated in order; the first match wins. Use '*' as a wildcard for operation or logical_node. Control routes (SELECT, SELECT_WITH_VALUE, OPERATE, DIRECT_OPERATE, CANCEL) must reference {data_object} so the controlled data object is identified. Control-block routes must reference their control block field. Values, quality, timestamps, origin, cause, and control model are never template fields — they remain protocol evidence.",
+  "routes": [
+    {
+      "name": "read-data-attribute",
+      "operation": "READ",
+      "logical_node": "*",
+      "action": "read",
+      "resource_type": "iec61850_data_attribute",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}/da:{data_attribute}"
+    },
+    {
+      "name": "write-setting",
+      "operation": "WRITE",
+      "logical_node": "*",
+      "action": "write",
+      "resource_type": "iec61850_data_attribute",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}/da:{data_attribute}"
+    },
+    {
+      "name": "select-switch-control",
+      "operation": "SELECT",
+      "logical_node": "CSWI1",
+      "action": "execute",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}"
+    },
+    {
+      "name": "select-with-value-switch-control",
+      "operation": "SELECT_WITH_VALUE",
+      "logical_node": "CSWI1",
+      "action": "execute",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}"
+    },
+    {
+      "name": "operate-switch-control",
+      "operation": "OPERATE",
+      "logical_node": "CSWI1",
+      "action": "execute",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}"
+    },
+    {
+      "name": "cancel-switch-control",
+      "operation": "CANCEL",
+      "logical_node": "CSWI1",
+      "action": "execute",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}"
+    },
+    {
+      "name": "direct-operate-any",
+      "operation": "DIRECT_OPERATE",
+      "logical_node": "*",
+      "action": "",
+      "resource_type": "iec61850_data_object",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/do:{data_object}"
+    },
+    {
+      "name": "enable-reporting",
+      "operation": "ENABLE_REPORTING",
+      "logical_node": "*",
+      "action": "subscribe",
+      "resource_type": "iec61850_report_control_block",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/rcb:{report_control_block}"
+    },
+    {
+      "name": "enable-goose",
+      "operation": "ENABLE_GOOSE",
+      "logical_node": "*",
+      "action": "subscribe",
+      "resource_type": "iec61850_goose_control_block",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/gcb:{goose_control_block}"
+    },
+    {
+      "name": "enable-sampled-values",
+      "operation": "ENABLE_SAMPLED_VALUES",
+      "logical_node": "*",
+      "action": "subscribe",
+      "resource_type": "iec61850_sampled_values_control_block",
+      "resource_id_template": "iec61850:ied:{ied_name}/ld:{logical_device}/ln:{logical_node}/svcb:{sampled_values_control_block}"
+    }
+  ]
+}

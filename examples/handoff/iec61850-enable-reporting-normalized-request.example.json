@@ -1,0 +1,32 @@
+{
+  "_comment": "Example handoff payload: IEC 61850 adapter normalized request for an ENABLE_REPORTING intent (source operation: enable report control block 'urcbMX01' bound to dataset 'MeasFlt' in logical node 'LLN0' on logical device 'MEAS' of IED 'ied-sub1'). Produced by Iec61850Adapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). Subscription-style intents normalize to 'subscribe'. The report control block and dataset identifiers stay in protocol_evidence and the resource ID — there is no report buffering, integrity period behavior, confirmation, or event sequencing in the adapter. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live report delivery.",
+  "protocol": "iec61850",
+  "action": "subscribe",
+  "resource_type": "iec61850_report_control_block",
+  "resource_id": "iec61850:ied:ied-sub1/ld:MEAS/ln:LLN0/rcb:urcbMX01",
+  "protocol_evidence": {
+    "protocol": "iec61850",
+    "method": "ENABLE_REPORTING",
+    "path": "ied:ied-sub1/ld:MEAS/ln:LLN0/rcb:urcbMX01",
+    "metadata": {
+      "operation": "ENABLE_REPORTING",
+      "ied_name": "ied-sub1",
+      "logical_device": "MEAS",
+      "logical_node": "LLN0",
+      "data_object": null,
+      "data_attribute": null,
+      "functional_constraint": "RP",
+      "dataset": "MeasFlt",
+      "report_control_block": "urcbMX01",
+      "goose_control_block": null,
+      "sampled_values_control_block": null,
+      "control_model": null,
+      "origin": null,
+      "cause": null,
+      "quality": null,
+      "timestamp": null,
+      "value": null
+    }
+  },
+  "subject_hint": null
+}

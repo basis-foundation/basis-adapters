@@ -20,6 +20,8 @@ automated tests, so examples and schemas cannot silently drift apart.
 | `examples/mqtt/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/dnp3/mapping.example.json` | `schemas/dnp3-mapping.schema.json` |
 | `examples/dnp3/mapping-invalid.example.json` | must **fail** validation (negative case) |
+| `examples/iec61850/mapping.example.json` | `schemas/iec61850-mapping.schema.json` |
+| `examples/iec61850/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/handoff/rest-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/bacnet-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/modbus-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
@@ -28,9 +30,12 @@ automated tests, so examples and schemas cannot silently drift apart.
 | `examples/handoff/mqtt-subscribe-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/dnp3-read-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/dnp3-direct-operate-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/iec61850-read-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/iec61850-direct-operate-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/iec61850-enable-reporting-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 
 In addition, the tests verify that **live adapter output matches the schema**: each
-adapter (REST, BACnet, Modbus, OPC UA, MQTT, DNP3) is loaded with its example mapping,
+adapter (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850) is loaded with its example mapping,
 normalizes a representative operation, and the resulting `to_dict()` output is
 validated against the normalized request schema. This keeps the schemas honest against the
 implementation, not just against static example files.

@@ -118,9 +118,9 @@ docs: clarify fail-closed semantics in adapter contract
 ## Adding a Future Protocol
 
 New protocol adapters are welcome, but they must conform to the existing pattern.
-The current roadmap (see the README) plans DNP3, IEC 61850, KNX, and
-Niagara. A new protocol PR should include, mirroring `rest/`, `bacnet/`,
-`modbus/`, `opcua/`, and `mqtt/`:
+The current roadmap (see the README) plans KNX and Niagara. A new protocol
+PR should include, mirroring `rest/`, `bacnet/`, `modbus/`, `opcua/`,
+`mqtt/`, `dnp3/`, and `iec61850/`:
 
 1. A typed operation model for the protocol (frozen dataclass).
 2. A mapping model with fail-fast validation (`InvalidMappingError` on bad config,

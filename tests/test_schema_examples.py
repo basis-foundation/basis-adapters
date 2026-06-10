@@ -15,10 +15,12 @@ Validated pairs:
    deliberately invalid MQTT mapping example FAILS validation.
 7. DNP3 mapping example against dnp3-mapping.schema.json, and the
    deliberately invalid DNP3 mapping example FAILS validation.
-8. All handoff examples against normalized-authorization-request.schema.json.
-9. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT, DNP3) against the
-   normalized request schema — schemas must match the implementation, not
-   just the example files.
+8. IEC 61850 mapping example against iec61850-mapping.schema.json, and the
+   deliberately invalid IEC 61850 mapping example FAILS validation.
+9. All handoff examples against normalized-authorization-request.schema.json.
+10. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850)
+    against the normalized request schema — schemas must match the
+    implementation, not just the example files.
 
 Convention: keys beginning with "_" (e.g. "_comment", "_error") are
 documentation annotations, not part of any contract. The adapters' from_dict()
@@ -40,6 +42,7 @@ from jsonschema.exceptions import ValidationError
 
 from basis_adapters.bacnet import BacnetAdapter, BacnetMappingConfig, BacnetOperation
 from basis_adapters.dnp3 import Dnp3Adapter, Dnp3MappingConfig, Dnp3Operation
+from basis_adapters.iec61850 import Iec61850Adapter, Iec61850MappingConfig, Iec61850Operation
 from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
 from basis_adapters.models import AdapterContext, ProtocolOperation
 from basis_adapters.mqtt import MqttAdapter, MqttMappingConfig, MqttOperation
@@ -56,6 +59,7 @@ MODBUS_MAPPING_SCHEMA = SCHEMAS / "modbus-mapping.schema.json"
 OPCUA_MAPPING_SCHEMA = SCHEMAS / "opcua-mapping.schema.json"
 MQTT_MAPPING_SCHEMA = SCHEMAS / "mqtt-mapping.schema.json"
 DNP3_MAPPING_SCHEMA = SCHEMAS / "dnp3-mapping.schema.json"
+IEC61850_MAPPING_SCHEMA = SCHEMAS / "iec61850-mapping.schema.json"
 NORMALIZED_REQUEST_SCHEMA = SCHEMAS / "normalized-authorization-request.schema.json"
 
 
@@ -128,6 +132,16 @@ class TestMappingExamplesMatchSchemas:
         with pytest.raises(ValidationError):
             validator_for(DNP3_MAPPING_SCHEMA).validate(instance)
 
+    def test_iec61850_mapping_example_matches_schema(self) -> None:
+        validate_example(IEC61850_MAPPING_SCHEMA, EXAMPLES / "iec61850" / "mapping.example.json")
+
+    def test_iec61850_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(
+            load_json(EXAMPLES / "iec61850" / "mapping-invalid.example.json")
+        )
+        with pytest.raises(ValidationError):
+            validator_for(IEC61850_MAPPING_SCHEMA).validate(instance)
+
 
 class TestHandoffExamplesMatchNormalizedRequestSchema:
     @pytest.mark.parametrize(
@@ -141,6 +155,9 @@ class TestHandoffExamplesMatchNormalizedRequestSchema:
             "mqtt-subscribe-normalized-request.example.json",
             "dnp3-read-normalized-request.example.json",
             "dnp3-direct-operate-normalized-request.example.json",
+            "iec61850-read-normalized-request.example.json",
+            "iec61850-direct-operate-normalized-request.example.json",
+            "iec61850-enable-reporting-normalized-request.example.json",
         ],
     )
     def test_handoff_example_matches_schema(self, example_name: str) -> None:
@@ -306,6 +323,79 @@ class TestLiveAdapterOutputMatchesNormalizedRequestSchema:
         assert d["resource_id"] == "dnp3:outstation:os-14/binary_output/7"
         validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
 
+    def test_iec61850_read_output_matches_schema(self) -> None:
+        config = Iec61850MappingConfig.from_dict(
+            load_json(EXAMPLES / "iec61850" / "mapping.example.json")
+        )
+        adapter = Iec61850Adapter(
+            mapping=config, context=AdapterContext(adapter_id="iec61850-schema")
+        )
+        op = Iec61850Operation(
+            operation="READ",
+            ied_name="ied-sub1",
+            logical_device="MEAS",
+            logical_node="MMXU1",
+            data_object="TotW",
+            data_attribute="mag",
+            functional_constraint="MX",
+            quality="good",
+            timestamp="2026-06-10T14:30:00Z",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "read"
+        assert d["resource_id"] == "iec61850:ied:ied-sub1/ld:MEAS/ln:MMXU1/do:TotW/da:mag"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_iec61850_direct_operate_output_matches_schema(self) -> None:
+        config = Iec61850MappingConfig.from_dict(
+            load_json(EXAMPLES / "iec61850" / "mapping.example.json")
+        )
+        adapter = Iec61850Adapter(
+            mapping=config, context=AdapterContext(adapter_id="iec61850-schema")
+        )
+        op = Iec61850Operation(
+            operation="DIRECT_OPERATE",
+            ied_name="ied-sub1",
+            logical_device="CTRL",
+            logical_node="CSWI1",
+            data_object="Pos",
+            functional_constraint="CO",
+            control_model="direct_with_normal_security",
+            origin={"orCat": "remote-control", "orIdent": "scada-master-1"},
+            cause="remote-command",
+            value=True,
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "execute"
+        assert d["resource_id"] == "iec61850:ied:ied-sub1/ld:CTRL/ln:CSWI1/do:Pos"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_iec61850_enable_reporting_output_matches_schema(self) -> None:
+        config = Iec61850MappingConfig.from_dict(
+            load_json(EXAMPLES / "iec61850" / "mapping.example.json")
+        )
+        adapter = Iec61850Adapter(
+            mapping=config, context=AdapterContext(adapter_id="iec61850-schema")
+        )
+        op = Iec61850Operation(
+            operation="ENABLE_REPORTING",
+            ied_name="ied-sub1",
+            logical_device="MEAS",
+            logical_node="LLN0",
+            dataset="MeasFlt",
+            report_control_block="urcbMX01",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "subscribe"
+        assert d["resource_id"] == "iec61850:ied:ied-sub1/ld:MEAS/ln:LLN0/rcb:urcbMX01"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
 
 class TestSchemasAreThemselvesValid:
     @pytest.mark.parametrize(
@@ -317,6 +407,7 @@ class TestSchemasAreThemselvesValid:
             OPCUA_MAPPING_SCHEMA,
             MQTT_MAPPING_SCHEMA,
             DNP3_MAPPING_SCHEMA,
+            IEC61850_MAPPING_SCHEMA,
             NORMALIZED_REQUEST_SCHEMA,
         ],
         ids=lambda p: p.name,
