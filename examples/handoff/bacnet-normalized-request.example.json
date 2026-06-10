@@ -1,0 +1,22 @@
+{
+  "_comment": "Example handoff payload: BACnet adapter normalized request. Produced by BacnetAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). This is a handoff artifact — not a decision, not enforcement, not authentication.",
+  "protocol": "bacnet",
+  "action": "read",
+  "resource_type": "point",
+  "resource_id": "device-42/point/analogInput:1:presentValue",
+  "protocol_evidence": {
+    "protocol": "bacnet",
+    "method": "ReadProperty",
+    "path": "analogInput:1:presentValue",
+    "metadata": {
+      "service": "ReadProperty",
+      "object_type": "analogInput",
+      "object_instance": 1,
+      "property_identifier": "presentValue",
+      "device_id": "device-42",
+      "priority": null,
+      "value_present": false
+    }
+  },
+  "subject_hint": null
+}

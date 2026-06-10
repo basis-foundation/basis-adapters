@@ -1,0 +1,16 @@
+{
+  "_comment": "Example handoff payload: REST adapter normalized request. Produced by RestAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). This is a handoff artifact — not a decision, not enforcement, not authentication.",
+  "protocol": "rest",
+  "action": "read",
+  "resource_type": "point",
+  "resource_id": "devices/ahu-1/points/supply-temp",
+  "protocol_evidence": {
+    "protocol": "rest",
+    "method": "GET",
+    "path": "/devices/ahu-1/points/supply-temp",
+    "metadata": {
+      "subject_hint": "operator@example.internal"
+    }
+  },
+  "subject_hint": "operator@example.internal"
+}
