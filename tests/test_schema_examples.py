@@ -1,0 +1,173 @@
+"""
+Schema/example validation tests — Phase 6.
+
+These tests prove that the example files in examples/ and the JSON Schemas in
+schemas/ cannot silently drift apart, and that live adapter output conforms to
+the canonical normalized request schema.
+
+Validated pairs:
+1. REST mapping examples (full + minimal) against rest-mapping.schema.json.
+2. The deliberately invalid REST mapping example FAILS validation.
+3. BACnet mapping example against bacnet-mapping.schema.json.
+4. Modbus mapping example against modbus-mapping.schema.json.
+5. All handoff examples against normalized-authorization-request.schema.json.
+6. Live adapter output (REST, BACnet, Modbus) against the normalized request
+   schema — schemas must match the implementation, not just the example files.
+
+Convention: keys beginning with "_" (e.g. "_comment", "_error") are
+documentation annotations, not part of any contract. The adapters' from_dict()
+constructors ignore them, and these tests strip them before validating, since
+the schemas are intentionally strict (additionalProperties: false).
+
+See docs/schema-validation.md.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError
+
+from basis_adapters.bacnet import BacnetAdapter, BacnetMappingConfig, BacnetOperation
+from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
+from basis_adapters.models import AdapterContext, ProtocolOperation
+from basis_adapters.rest import RestAdapter, RestMappingConfig
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCHEMAS = REPO_ROOT / "schemas"
+EXAMPLES = REPO_ROOT / "examples"
+
+REST_MAPPING_SCHEMA = SCHEMAS / "rest-mapping.schema.json"
+BACNET_MAPPING_SCHEMA = SCHEMAS / "bacnet-mapping.schema.json"
+MODBUS_MAPPING_SCHEMA = SCHEMAS / "modbus-mapping.schema.json"
+NORMALIZED_REQUEST_SCHEMA = SCHEMAS / "normalized-authorization-request.schema.json"
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    with path.open() as f:
+        data: dict[str, Any] = json.load(f)
+    return data
+
+
+def strip_annotations(value: Any) -> Any:
+    """
+    Recursively remove "_"-prefixed annotation keys (e.g. "_comment", "_error").
+
+    These keys are documentation embedded in example files. They are ignored by
+    the adapters' from_dict() constructors and are not part of any contract, so
+    they are stripped before validating against the (strict) schemas.
+    """
+    if isinstance(value, dict):
+        return {k: strip_annotations(v) for k, v in value.items() if not k.startswith("_")}
+    if isinstance(value, list):
+        return [strip_annotations(item) for item in value]
+    return value
+
+
+def validator_for(schema_path: Path) -> Draft202012Validator:
+    schema = load_json(schema_path)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema)
+
+
+def validate_example(schema_path: Path, example_path: Path) -> None:
+    instance = strip_annotations(load_json(example_path))
+    validator_for(schema_path).validate(instance)
+
+
+class TestMappingExamplesMatchSchemas:
+    def test_rest_mapping_example_matches_schema(self) -> None:
+        validate_example(REST_MAPPING_SCHEMA, EXAMPLES / "rest" / "mapping.example.json")
+
+    def test_rest_mapping_minimal_example_matches_schema(self) -> None:
+        validate_example(REST_MAPPING_SCHEMA, EXAMPLES / "rest" / "mapping-minimal.example.json")
+
+    def test_rest_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(load_json(EXAMPLES / "rest" / "mapping-invalid.example.json"))
+        with pytest.raises(ValidationError):
+            validator_for(REST_MAPPING_SCHEMA).validate(instance)
+
+    def test_bacnet_mapping_example_matches_schema(self) -> None:
+        validate_example(BACNET_MAPPING_SCHEMA, EXAMPLES / "bacnet" / "mapping.example.json")
+
+    def test_modbus_mapping_example_matches_schema(self) -> None:
+        validate_example(MODBUS_MAPPING_SCHEMA, EXAMPLES / "modbus" / "mapping.example.json")
+
+
+class TestHandoffExamplesMatchNormalizedRequestSchema:
+    @pytest.mark.parametrize(
+        "example_name",
+        [
+            "rest-normalized-request.example.json",
+            "bacnet-normalized-request.example.json",
+            "modbus-normalized-request.example.json",
+        ],
+    )
+    def test_handoff_example_matches_schema(self, example_name: str) -> None:
+        validate_example(NORMALIZED_REQUEST_SCHEMA, EXAMPLES / "handoff" / example_name)
+
+
+class TestLiveAdapterOutputMatchesNormalizedRequestSchema:
+    """Schemas must match the implementation, not just the static example files."""
+
+    def test_rest_adapter_output_matches_schema(self) -> None:
+        config = RestMappingConfig.from_dict(load_json(EXAMPLES / "rest" / "mapping.example.json"))
+        adapter = RestAdapter(mapping=config, context=AdapterContext(adapter_id="rest-schema"))
+        op = ProtocolOperation(
+            protocol="rest",
+            method="GET",
+            path="/devices/ahu-1/points/supply-temp",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(result.request.to_dict())
+
+    def test_bacnet_adapter_output_matches_schema(self) -> None:
+        config = BacnetMappingConfig.from_dict(
+            load_json(EXAMPLES / "bacnet" / "mapping.example.json")
+        )
+        adapter = BacnetAdapter(mapping=config, context=AdapterContext(adapter_id="bacnet-schema"))
+        op = BacnetOperation(
+            service="ReadProperty",
+            object_type="analogInput",
+            object_instance=1,
+            property_identifier="presentValue",
+            device_id="device-42",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(result.request.to_dict())
+
+    def test_modbus_adapter_output_matches_schema(self) -> None:
+        config = ModbusMappingConfig.from_dict(
+            load_json(EXAMPLES / "modbus" / "mapping.example.json")
+        )
+        adapter = ModbusAdapter(mapping=config, context=AdapterContext(adapter_id="modbus-schema"))
+        op = ModbusOperation(
+            function="ReadHoldingRegisters",
+            unit_id=1,
+            address=40001,
+            quantity=1,
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(result.request.to_dict())
+
+
+class TestSchemasAreThemselvesValid:
+    @pytest.mark.parametrize(
+        "schema_path",
+        [
+            REST_MAPPING_SCHEMA,
+            BACNET_MAPPING_SCHEMA,
+            MODBUS_MAPPING_SCHEMA,
+            NORMALIZED_REQUEST_SCHEMA,
+        ],
+        ids=lambda p: p.name,
+    )
+    def test_schema_is_valid_draft_2020_12(self, schema_path: Path) -> None:
+        Draft202012Validator.check_schema(load_json(schema_path))

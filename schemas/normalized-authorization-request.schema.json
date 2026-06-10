@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://basis-foundation.example/schemas/normalized-authorization-request.schema.json",
   "title": "NormalizedAuthorizationRequest",
   "description": "Canonical serialized form of a normalized authorization request produced by a basis-adapters adapter. This is a handoff artifact: it is not a decision, not enforcement, and not authentication.",
