@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://basis-foundation.example/schemas/modbus-mapping.schema.json",
   "title": "ModbusMappingConfig",
   "description": "Configuration schema for the Modbus adapter mapping. Describes how Modbus function requests are normalized into BASIS authorization requests.",
