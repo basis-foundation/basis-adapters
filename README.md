@@ -44,16 +44,29 @@ Adapters never see the decision. They do not allow or deny anything.
 | REST | `basis_adapters.rest` | Skeleton + contract hardening |
 | BACnet | `basis_adapters.bacnet` | Skeleton |
 | Modbus | `basis_adapters.modbus` | Skeleton |
+| OPC UA | `basis_adapters.opcua` | Skeleton |
 
-All three adapters emit the same canonical normalized request shape, defined in
+All four adapters emit the same canonical normalized request shape, defined in
 [`schemas/normalized-authorization-request.schema.json`](schemas/normalized-authorization-request.schema.json)
 and proven by cross-protocol contract tests.
+
+### Phase 7: OPC UA
+
+Phase 7 added OPC UA as the fourth protocol family. The OPC UA adapter
+normalizes `Read`, `Write`, `Call`, `Subscribe`, and `Browse` service intent
+into the canonical handoff shape, introducing the additive action verbs
+`execute` (method invocation) and `browse` (address-space traversal). Like the
+other adapters, it is pure normalization: no live OPC UA networking, no
+endpoint discovery, no certificates, no secure channels, no sessions. Session
+and endpoint context is preserved as audit evidence only. See
+[docs/architecture/opcua-adapter.md](docs/architecture/opcua-adapter.md) and
+[docs/implementation/phase-7-opcua-adapter.md](docs/implementation/phase-7-opcua-adapter.md).
 
 ## What Adapters Do
 
 - Translate protocol operations (HTTP requests, BACnet service primitives, Modbus
-  function requests) into protocol-agnostic authorization requests via declarative,
-  validated mapping configs.
+  function requests, OPC UA service requests) into protocol-agnostic authorization
+  requests via declarative, validated mapping configs.
 - Preserve the original operation verbatim as `protocol_evidence` for audit.
 - **Fail closed**: if normalization fails (`result.success is False`), the caller
   must not forward the operation. A normalization failure is not an authorization
@@ -101,9 +114,9 @@ else:
     print(f"Normalization failed: {result.error}")
 ```
 
-BACnet and Modbus follow the identical pattern — see the package docstrings
-(`basis_adapters.bacnet`, `basis_adapters.modbus`) and
-[docs/examples.md](docs/examples.md).
+BACnet, Modbus, and OPC UA follow the identical pattern — see the package
+docstrings (`basis_adapters.bacnet`, `basis_adapters.modbus`,
+`basis_adapters.opcua`) and [docs/examples.md](docs/examples.md).
 
 ---
 
@@ -139,7 +152,7 @@ mypy src                  # strict type checking
 | Schema/example validation | [docs/schema-validation.md](docs/schema-validation.md) |
 | Development workflow | [docs/development-workflow.md](docs/development-workflow.md) |
 | Release readiness (v0.1.0 gate) | [docs/release-readiness.md](docs/release-readiness.md) |
-| Implementation history (Phases 1–5) | [docs/implementation/](docs/implementation/) |
+| Implementation history (Phases 1–7) | [docs/implementation/](docs/implementation/) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Security policy | [SECURITY.md](SECURITY.md) |
 

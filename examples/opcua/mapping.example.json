@@ -1,0 +1,45 @@
+{
+  "_comment": "Example OPC UA adapter mapping configuration. Routes are evaluated in order; the first match wins. Use '*' as a wildcard for service or attribute_id. Call routes must reference {method_id} in their resource_id_template.",
+  "routes": [
+    {
+      "name": "read-node-value",
+      "service": "Read",
+      "attribute_id": "Value",
+      "action": "read",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id}:{attribute_id}"
+    },
+    {
+      "name": "write-node-value",
+      "service": "Write",
+      "attribute_id": "Value",
+      "action": "write",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id}:{attribute_id}"
+    },
+    {
+      "name": "call-method",
+      "service": "Call",
+      "attribute_id": "*",
+      "action": "execute",
+      "resource_type": "opcua_method",
+      "resource_id_template": "{node_id}:method:{method_id}"
+    },
+    {
+      "name": "subscribe-node-value",
+      "service": "Subscribe",
+      "attribute_id": "Value",
+      "action": "subscribe",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id}:{attribute_id}"
+    },
+    {
+      "name": "browse-node",
+      "service": "Browse",
+      "attribute_id": "*",
+      "action": "browse",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id}"
+    }
+  ]
+}

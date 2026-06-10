@@ -10,9 +10,11 @@ Validated pairs:
 2. The deliberately invalid REST mapping example FAILS validation.
 3. BACnet mapping example against bacnet-mapping.schema.json.
 4. Modbus mapping example against modbus-mapping.schema.json.
-5. All handoff examples against normalized-authorization-request.schema.json.
-6. Live adapter output (REST, BACnet, Modbus) against the normalized request
-   schema — schemas must match the implementation, not just the example files.
+5. OPC UA mapping example against opcua-mapping.schema.json.
+6. All handoff examples against normalized-authorization-request.schema.json.
+7. Live adapter output (REST, BACnet, Modbus, OPC UA) against the normalized
+   request schema — schemas must match the implementation, not just the
+   example files.
 
 Convention: keys beginning with "_" (e.g. "_comment", "_error") are
 documentation annotations, not part of any contract. The adapters' from_dict()
@@ -35,6 +37,7 @@ from jsonschema.exceptions import ValidationError
 from basis_adapters.bacnet import BacnetAdapter, BacnetMappingConfig, BacnetOperation
 from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
 from basis_adapters.models import AdapterContext, ProtocolOperation
+from basis_adapters.opcua import OpcuaAdapter, OpcuaMappingConfig, OpcuaOperation
 from basis_adapters.rest import RestAdapter, RestMappingConfig
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -44,6 +47,7 @@ EXAMPLES = REPO_ROOT / "examples"
 REST_MAPPING_SCHEMA = SCHEMAS / "rest-mapping.schema.json"
 BACNET_MAPPING_SCHEMA = SCHEMAS / "bacnet-mapping.schema.json"
 MODBUS_MAPPING_SCHEMA = SCHEMAS / "modbus-mapping.schema.json"
+OPCUA_MAPPING_SCHEMA = SCHEMAS / "opcua-mapping.schema.json"
 NORMALIZED_REQUEST_SCHEMA = SCHEMAS / "normalized-authorization-request.schema.json"
 
 
@@ -97,6 +101,9 @@ class TestMappingExamplesMatchSchemas:
     def test_modbus_mapping_example_matches_schema(self) -> None:
         validate_example(MODBUS_MAPPING_SCHEMA, EXAMPLES / "modbus" / "mapping.example.json")
 
+    def test_opcua_mapping_example_matches_schema(self) -> None:
+        validate_example(OPCUA_MAPPING_SCHEMA, EXAMPLES / "opcua" / "mapping.example.json")
+
 
 class TestHandoffExamplesMatchNormalizedRequestSchema:
     @pytest.mark.parametrize(
@@ -105,6 +112,7 @@ class TestHandoffExamplesMatchNormalizedRequestSchema:
             "rest-normalized-request.example.json",
             "bacnet-normalized-request.example.json",
             "modbus-normalized-request.example.json",
+            "opcua-normalized-request.example.json",
         ],
     )
     def test_handoff_example_matches_schema(self, example_name: str) -> None:
@@ -157,6 +165,39 @@ class TestLiveAdapterOutputMatchesNormalizedRequestSchema:
         assert result.success and result.request is not None
         validator_for(NORMALIZED_REQUEST_SCHEMA).validate(result.request.to_dict())
 
+    def test_opcua_adapter_output_matches_schema(self) -> None:
+        config = OpcuaMappingConfig.from_dict(
+            load_json(EXAMPLES / "opcua" / "mapping.example.json")
+        )
+        adapter = OpcuaAdapter(mapping=config, context=AdapterContext(adapter_id="opcua-schema"))
+        op = OpcuaOperation(
+            service="Read",
+            node_id="ns=2;s=Building.AHU1.SupplyTemp",
+            attribute_id="Value",
+            namespace_index=2,
+            identifier="Building.AHU1.SupplyTemp",
+            identifier_type="string",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(result.request.to_dict())
+
+    def test_opcua_call_output_matches_schema(self) -> None:
+        config = OpcuaMappingConfig.from_dict(
+            load_json(EXAMPLES / "opcua" / "mapping.example.json")
+        )
+        adapter = OpcuaAdapter(mapping=config, context=AdapterContext(adapter_id="opcua-schema"))
+        op = OpcuaOperation(
+            service="Call",
+            node_id="ns=2;s=Building.AHU1",
+            method_id="ns=2;s=Building.AHU1.Reset",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "execute"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
 
 class TestSchemasAreThemselvesValid:
     @pytest.mark.parametrize(
@@ -165,6 +206,7 @@ class TestSchemasAreThemselvesValid:
             REST_MAPPING_SCHEMA,
             BACNET_MAPPING_SCHEMA,
             MODBUS_MAPPING_SCHEMA,
+            OPCUA_MAPPING_SCHEMA,
             NORMALIZED_REQUEST_SCHEMA,
         ],
         ids=lambda p: p.name,

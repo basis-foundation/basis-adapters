@@ -1,18 +1,20 @@
 """
-Cross-protocol normalization contract tests — Phase 5.
+Cross-protocol normalization contract tests — Phases 5 and 7.
 
 These tests prove that:
 1. REST normalized requests serialize to the canonical shape.
 2. BACnet normalized requests serialize to the canonical shape.
 3. Modbus normalized requests serialize to the canonical shape.
-4. Required fields are present for all three protocols.
-5. Protocol-specific evidence is nested under "protocol_evidence".
-6. No authorization decision field is present in the output.
-7. No resolved subject identity field is present (only the unverified hint).
-8. No gateway transport code is invoked.
-9. No basis_core import exists anywhere in basis_adapters.
-10. REST, BACnet, and Modbus outputs share exactly the same top-level field set.
-11. Serialization is deterministic.
+4. OPC UA normalized requests serialize to the canonical shape.
+5. Required fields are present for all four protocols.
+6. Protocol-specific evidence is nested under "protocol_evidence".
+7. No authorization decision field is present in the output.
+8. No resolved subject identity field is present (only the unverified hint).
+9. No gateway transport code is invoked.
+10. No basis_core import exists anywhere in basis_adapters.
+11. REST, BACnet, Modbus, and OPC UA outputs share exactly the same top-level
+    field set.
+12. Serialization is deterministic.
 
 The contract document is: docs/contracts/normalization-contract.md
 The JSON Schema is: schemas/normalized-authorization-request.schema.json
@@ -33,6 +35,8 @@ from basis_adapters.models import (
     NormalizedAuthorizationRequest,
     ProtocolOperation,
 )
+from basis_adapters.opcua.adapter import OpcuaAdapter
+from basis_adapters.opcua.mapping import OpcuaMappingConfig, OpcuaOperation, OpcuaRouteMapping
 from basis_adapters.rest.adapter import RestAdapter
 from basis_adapters.rest.mapping import RestMappingConfig, RouteMapping
 
@@ -172,6 +176,41 @@ def _modbus_normalized() -> NormalizedAuthorizationRequest:
     adapter = _modbus_adapter()
     result = adapter.normalize(_modbus_operation())
     assert result.success, f"Modbus normalization failed: {result.error}"
+    assert result.request is not None
+    return result.request
+
+
+def _opcua_adapter() -> OpcuaAdapter:
+    route = OpcuaRouteMapping(
+        service="Read",
+        attribute_id="Value",
+        action="read",
+        resource_type="opcua_node",
+        resource_id_template="{node_id}:{attribute_id}",
+        name="read-node-value",
+    )
+    config = OpcuaMappingConfig(routes=[route])
+    ctx = AdapterContext(adapter_id="opcua-normalization-test")
+    return OpcuaAdapter(mapping=config, context=ctx)
+
+
+def _opcua_operation(subject_hint: str | None = None) -> OpcuaOperation:
+    meta: dict[str, Any] = {}
+    if subject_hint is not None:
+        meta["subject_hint"] = subject_hint
+    return OpcuaOperation(
+        service="Read",
+        node_id="ns=2;s=Building.AHU1.SupplyTemp",
+        attribute_id="Value",
+        namespace_index=2,
+        metadata=meta,
+    )
+
+
+def _opcua_normalized() -> NormalizedAuthorizationRequest:
+    adapter = _opcua_adapter()
+    result = adapter.normalize(_opcua_operation())
+    assert result.success, f"OPC UA normalization failed: {result.error}"
     assert result.request is not None
     return result.request
 
@@ -394,7 +433,81 @@ class TestModbusCanonicalShape:
 
 
 # ---------------------------------------------------------------------------
-# 4. REST, BACnet, and Modbus share the same canonical field set
+# 4. OPC UA serializes to canonical shape
+# ---------------------------------------------------------------------------
+
+
+class TestOpcuaCanonicalShape:
+    def test_to_dict_returns_dict(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert isinstance(d, dict)
+
+    def test_top_level_fields_exactly_canonical(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert set(d.keys()) == CANONICAL_FIELDS
+
+    def test_protocol_is_opcua(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert d["protocol"] == "opcua"
+
+    def test_action_is_string(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert isinstance(d["action"], str)
+        assert len(d["action"]) > 0
+
+    def test_resource_type_is_string(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert isinstance(d["resource_type"], str)
+        assert len(d["resource_type"]) > 0
+
+    def test_resource_id_is_string(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert isinstance(d["resource_id"], str)
+        assert len(d["resource_id"]) > 0
+
+    def test_protocol_evidence_present_and_nested(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert "protocol_evidence" in d
+        assert isinstance(d["protocol_evidence"], dict)
+
+    def test_protocol_evidence_fields_exactly_canonical(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert set(d["protocol_evidence"].keys()) == CANONICAL_EVIDENCE_FIELDS
+
+    def test_protocol_evidence_metadata_contains_opcua_fields(self) -> None:
+        d = _opcua_normalized().to_dict()
+        meta = d["protocol_evidence"]["metadata"]
+        assert "service" in meta
+        assert "node_id" in meta
+        assert "attribute_id" in meta
+        assert "method_id" in meta
+        assert "namespace_index" in meta
+        assert "value_present" in meta
+
+    def test_no_forbidden_fields(self) -> None:
+        d = _opcua_normalized().to_dict()
+        present = FORBIDDEN_FIELDS & set(d.keys())
+        assert not present, f"Forbidden fields found in OPC UA output: {present}"
+
+    def test_subject_hint_none_when_absent(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert d["subject_hint"] is None
+
+    def test_subject_hint_forwarded_when_present(self) -> None:
+        adapter = _opcua_adapter()
+        result = adapter.normalize(_opcua_operation(subject_hint="operator@example.internal"))
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["subject_hint"] == "operator@example.internal"
+
+    def test_output_is_json_serializable(self) -> None:
+        d = _opcua_normalized().to_dict()
+        encoded = json.dumps(d)
+        assert len(encoded) > 0
+
+
+# ---------------------------------------------------------------------------
+# 5. REST, BACnet, Modbus, and OPC UA share the same canonical field set
 # ---------------------------------------------------------------------------
 
 
@@ -426,27 +539,58 @@ class TestCrossProtocolFieldSetParity:
             f"Field set mismatch:\n  BACnet-only: {bacnet_only}\n  Modbus-only: {modbus_only}"
         )
 
-    def test_all_three_evidence_field_sets_identical(self) -> None:
+    def test_rest_opcua_top_level_field_sets_identical(self) -> None:
+        rest_keys = set(_rest_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        rest_only = rest_keys - opcua_keys
+        opcua_only = opcua_keys - rest_keys
+        assert rest_keys == opcua_keys, (
+            f"Field set mismatch:\n  REST-only: {rest_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_bacnet_opcua_top_level_field_sets_identical(self) -> None:
+        bacnet_keys = set(_bacnet_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        bacnet_only = bacnet_keys - opcua_keys
+        opcua_only = opcua_keys - bacnet_keys
+        assert bacnet_keys == opcua_keys, (
+            f"Field set mismatch:\n  BACnet-only: {bacnet_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_modbus_opcua_top_level_field_sets_identical(self) -> None:
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        modbus_only = modbus_keys - opcua_keys
+        opcua_only = opcua_keys - modbus_keys
+        assert modbus_keys == opcua_keys, (
+            f"Field set mismatch:\n  Modbus-only: {modbus_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_all_four_evidence_field_sets_identical(self) -> None:
         rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
         bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
         modbus_ev = set(_modbus_normalized().to_dict()["protocol_evidence"].keys())
-        assert rest_ev == bacnet_ev == modbus_ev, (
-            f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, Modbus={modbus_ev}"
+        opcua_ev = set(_opcua_normalized().to_dict()["protocol_evidence"].keys())
+        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev, (
+            f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, "
+            f"Modbus={modbus_ev}, OPC UA={opcua_ev}"
         )
 
     def test_all_protocols_have_correct_protocol_field(self) -> None:
         assert _rest_normalized().to_dict()["protocol"] == "rest"
         assert _bacnet_normalized().to_dict()["protocol"] == "bacnet"
         assert _modbus_normalized().to_dict()["protocol"] == "modbus"
+        assert _opcua_normalized().to_dict()["protocol"] == "opcua"
 
     def test_all_protocols_produce_read_action_for_read_operations(self) -> None:
         assert _rest_normalized().to_dict()["action"] == "read"
         assert _bacnet_normalized().to_dict()["action"] == "read"
         assert _modbus_normalized().to_dict()["action"] == "read"
+        assert _opcua_normalized().to_dict()["action"] == "read"
 
 
 # ---------------------------------------------------------------------------
-# 5. Serialization is deterministic
+# 6. Serialization is deterministic
 # ---------------------------------------------------------------------------
 
 
@@ -478,9 +622,18 @@ class TestSerializationDeterminism:
         r2 = _modbus_normalized()
         assert r1.to_dict() == r2.to_dict()
 
+    def test_opcua_deterministic_across_calls(self) -> None:
+        r = _opcua_normalized()
+        assert r.to_dict() == r.to_dict()
+
+    def test_opcua_deterministic_across_instances(self) -> None:
+        r1 = _opcua_normalized()
+        r2 = _opcua_normalized()
+        assert r1.to_dict() == r2.to_dict()
+
 
 # ---------------------------------------------------------------------------
-# 6. Isolation — no basis_core import, no gateway transport
+# 7. Isolation — no basis_core import, no gateway transport
 # ---------------------------------------------------------------------------
 
 
@@ -530,6 +683,7 @@ class TestAdapterIsolation:
             _rest_normalized().to_dict()
             _bacnet_normalized().to_dict()
             _modbus_normalized().to_dict()
+            _opcua_normalized().to_dict()
         finally:
             socket.getaddrinfo = original_getaddrinfo  # type: ignore[method-assign]
 
@@ -537,7 +691,7 @@ class TestAdapterIsolation:
 
 
 # ---------------------------------------------------------------------------
-# 7. Protocol evidence is always present in serialized output
+# 8. Protocol evidence is always present in serialized output
 # ---------------------------------------------------------------------------
 
 
@@ -574,3 +728,15 @@ class TestProtocolEvidencePresence:
     def test_modbus_evidence_path_encodes_unit_and_address(self) -> None:
         d = _modbus_normalized().to_dict()
         assert d["protocol_evidence"]["path"] == "unit:1:addr:40001"
+
+    def test_opcua_evidence_protocol_matches_parent(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert d["protocol_evidence"]["protocol"] == d["protocol"]
+
+    def test_opcua_evidence_method_is_service_name(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert d["protocol_evidence"]["method"] == "Read"
+
+    def test_opcua_evidence_path_is_node_id(self) -> None:
+        d = _opcua_normalized().to_dict()
+        assert d["protocol_evidence"]["path"] == "ns=2;s=Building.AHU1.SupplyTemp"
