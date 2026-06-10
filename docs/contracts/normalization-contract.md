@@ -35,13 +35,13 @@ participate in that decision.
 | `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`) |
 | `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`, `"execute"`, `"browse"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
-
-> `execute` (method invocation) and `browse` (address-space traversal) were
-> added additively in Phase 7 for OPC UA. Existing protocol mappings and
-> downstream consumers are unaffected; the enum only grew.
 | `resource_id` | string | yes | Stable identifier for the target resource |
 | `protocol_evidence` | object | yes | The original protocol operation, preserved verbatim for audit |
 | `subject_hint` | string or null | no | Unverified identity hint forwarded from the protocol layer |
+
+> `execute` (method invocation) and `browse` (address-space traversal) were
+> added additively in Phase 7 for OPC UA. Existing protocol mappings and
+> downstream consumers are unaffected; the action vocabulary only grew.
 
 ### Protocol Evidence
 

@@ -50,8 +50,8 @@ This document defines what must be true before a future `v0.1.0` release of
 
 - [ ] The adapter contract (`docs/contracts/adapter-contract.md`) remains intact:
       fail-closed semantics, evidence preservation, no authorization logic.
-- [ ] REST, BACnet, and Modbus adapters all emit the canonical normalized request
-      shape (enforced by `tests/test_normalization_contract.py`).
+- [ ] REST, BACnet, Modbus, and OPC UA adapters all emit the canonical normalized
+      request shape (enforced by `tests/test_normalization_contract.py`).
 - [ ] No coupling to `basis-core` or `basis-gateway` has been introduced.
 
 ## Out of Scope for v0.1.0

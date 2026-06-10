@@ -2,8 +2,8 @@
 
 ## What is an Adapter?
 
-An adapter is a translation layer between a building automation protocol and the
-BASIS authorization model. Adapters speak the language of their protocol on the
+An adapter is a translation layer between an operational technology (OT) protocol
+and the BASIS authorization model. Adapters speak the language of their protocol on the
 inbound side, and produce normalized authorization requests on the outbound side.
 
 An adapter answers one question: **given this protocol operation, what authorization
@@ -16,7 +16,8 @@ Adapters do not answer whether the request should be allowed.
 ## What Adapters Own
 
 - Protocol-specific parsing: understanding HTTP methods and paths, BACnet object
-  identifiers and property references, Modbus function codes and register addresses.
+  identifiers and property references, Modbus function codes and register addresses,
+  OPC UA node identifiers and service requests.
 - Normalization: mapping protocol operations to a stable, protocol-agnostic
   authorization request shape (`NormalizedAuthorizationRequest`).
 - Mapping configuration: rules that describe which protocol operations correspond to
@@ -102,7 +103,12 @@ security bypass. Adapters must not receive, inspect, or act on authorization dec
 
 ## Current Protocol Support
 
-### REST (Phase 1)
+Four adapters are implemented and normalization-complete: REST, BACnet, Modbus,
+and OPC UA. All four emit the canonical Normalized Authorization Request shape
+and participate in the cross-protocol contract tests. Planned protocols (MQTT,
+DNP3, IEC 61850, KNX, Niagara) are tracked in the README roadmap.
+
+### REST
 
 The REST adapter normalizes HTTP method + path into BASIS authorization semantics.
 It is configured by a `RestMappingConfig` that maps `(method, path_pattern)` pairs
@@ -115,14 +121,25 @@ GET /devices/ahu-1/points/supply-temp
   → action=read, resource_type=point, resource_id=ahu-1:supply-temp, protocol=rest
 ```
 
-### BACnet (Future — Phase 2)
+### BACnet
 
 BACnet uses object identifiers, property references, and service primitives
-(`ReadProperty`, `WriteProperty`, `CommandValue`, `SubscribeCOV`). The BACnet adapter
-will map these to the same normalized model as REST.
+(`ReadProperty`, `WriteProperty`, `CommandValue`, `SubscribeCOV`). The BACnet
+adapter maps these to the same normalized model as REST. See
+[bacnet-adapter.md](bacnet-adapter.md).
 
-BACnet comes after REST because REST validation establishes the normalization model
-before introducing protocol-specific complexity.
+### Modbus
+
+Modbus is register-oriented: function codes addressing coils and registers by
+numeric address within a unit. The mapping configuration supplies the resource
+semantics the protocol itself lacks. See [modbus-adapter.md](modbus-adapter.md).
+
+### OPC UA
+
+OPC UA exposes a typed, hierarchical address space with first-class methods and
+subscriptions. Its `Read`, `Write`, `Call`, `Subscribe`, and `Browse` services
+normalize to the canonical action vocabulary, including the `execute` and
+`browse` verbs. See [opcua-adapter.md](opcua-adapter.md).
 
 ---
 

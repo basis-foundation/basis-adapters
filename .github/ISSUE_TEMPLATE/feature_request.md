@@ -13,7 +13,7 @@ assignees: ""
 ## If This Is a New Protocol Adapter
 
 - Protocol name and version:
-- How operations map to normalized actions (read/write/control/discover/subscribe):
+- How operations map to normalized actions (read/write/control/discover/subscribe/execute/browse):
 - What a resource looks like in this protocol (resource_type / resource_id):
 - What protocol evidence must be preserved for audit:
 

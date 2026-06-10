@@ -22,8 +22,8 @@ The governing principle:
 > **Adapters normalize. Gateway enforces. Kernel evaluates.**
 
 Adapters translate raw protocol operations (an HTTP request, a BACnet service
-primitive, a Modbus function) into a canonical, protocol-agnostic authorization
-request. That is the entire job. Everything else belongs elsewhere in the ecosystem.
+primitive, a Modbus function, an OPC UA service request) into a canonical,
+protocol-agnostic authorization request. That is the entire job. Everything else belongs elsewhere in the ecosystem.
 
 ## Architectural Guardrails
 
@@ -113,7 +113,9 @@ docs: clarify fail-closed semantics in adapter contract
 ## Adding a Future Protocol
 
 New protocol adapters are welcome, but they must conform to the existing pattern.
-A new protocol PR should include, mirroring `rest/`, `bacnet/`, and `modbus/`:
+The current roadmap (see the README) plans MQTT, DNP3, IEC 61850, KNX, and
+Niagara. A new protocol PR should include, mirroring `rest/`, `bacnet/`,
+`modbus/`, and `opcua/`:
 
 1. A typed operation model for the protocol (frozen dataclass).
 2. A mapping model with fail-fast validation (`InvalidMappingError` on bad config,
