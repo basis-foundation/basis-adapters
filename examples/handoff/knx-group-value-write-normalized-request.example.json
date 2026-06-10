@@ -1,0 +1,27 @@
+{
+  "_comment": "Example handoff payload: KNX adapter normalized request for a GROUP_VALUE_WRITE intent (source operation: group value write of value true to group address '1/2/3', datapoint type 1.001 switching, communication object 4, from device '1.1.5'). Produced by KnxAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). The written value is preserved verbatim in protocol_evidence and never appears in the resource_id. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live KNX communication.",
+  "protocol": "knx",
+  "action": "write",
+  "resource_type": "knx_group_address",
+  "resource_id": "knx:group:1/2/3",
+  "protocol_evidence": {
+    "protocol": "knx",
+    "method": "GROUP_VALUE_WRITE",
+    "path": "group:1/2/3/object:4",
+    "metadata": {
+      "operation": "GROUP_VALUE_WRITE",
+      "group_address": "1/2/3",
+      "individual_address": "1.1.5",
+      "device_address": null,
+      "communication_object": 4,
+      "datapoint_type": "1.001",
+      "payload_type": "boolean",
+      "value": true,
+      "priority": "normal",
+      "area": 1,
+      "line": 1,
+      "device": 5
+    }
+  },
+  "subject_hint": null
+}

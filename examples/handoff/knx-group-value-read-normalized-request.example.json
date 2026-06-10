@@ -1,0 +1,27 @@
+{
+  "_comment": "Example handoff payload: KNX adapter normalized request for a GROUP_VALUE_READ intent (source operation: group value read of group address '1/2/3', datapoint type 1.001, requested by device '1.1.5'). Produced by KnxAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). The group address, individual address, datapoint type, and priority stay in protocol_evidence — never as top-level fields. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live KNX communication.",
+  "protocol": "knx",
+  "action": "read",
+  "resource_type": "knx_group_address",
+  "resource_id": "knx:group:1/2/3",
+  "protocol_evidence": {
+    "protocol": "knx",
+    "method": "GROUP_VALUE_READ",
+    "path": "group:1/2/3",
+    "metadata": {
+      "operation": "GROUP_VALUE_READ",
+      "group_address": "1/2/3",
+      "individual_address": "1.1.5",
+      "device_address": null,
+      "communication_object": null,
+      "datapoint_type": "1.001",
+      "payload_type": null,
+      "value": null,
+      "priority": "normal",
+      "area": null,
+      "line": null,
+      "device": null
+    }
+  },
+  "subject_hint": null
+}

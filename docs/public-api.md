@@ -120,6 +120,19 @@ detail and may change without notice.
 | `VALID_IEC61850_OPERATIONS` | Allowed IEC 61850 operation names (`READ`, `WRITE`, `SELECT`, `SELECT_WITH_VALUE`, `OPERATE`, `DIRECT_OPERATE`, `CANCEL`, `ENABLE_REPORTING`, `ENABLE_GOOSE`, `ENABLE_SAMPLED_VALUES`). |
 | `VALID_IEC61850_TEMPLATE_FIELDS` | Allowed fields in IEC 61850 resource-ID templates. |
 
+## KNX (`basis_adapters.knx`)
+
+| Name | Purpose |
+|---|---|
+| `KnxAdapter` | Normalizes KNX group value read/write/response and observe intents into a `NormalizedAuthorizationRequest`. |
+| `KnxMappingConfig` | Validated KNX mapping configuration; `from_dict()` constructor. Schema: `schemas/knx-mapping.schema.json`. |
+| `KnxOperation` | Typed KNX operation (operation, group address, individual/device address, communication object, datapoint type, payload/value/priority evidence, topology area/line/device). |
+| `KnxRouteMapping` | A single KNX route mapping entry. |
+| `VALID_KNX_ACTIONS` | Normalized action verbs accepted for KNX routes (shared set, unchanged). |
+| `VALID_KNX_OPERATIONS` | Allowed KNX operation names (`GROUP_VALUE_READ`, `GROUP_VALUE_WRITE`, `GROUP_VALUE_RESPONSE`, `OBSERVE`). |
+| `VALID_KNX_PRIORITIES` | Allowed KNX frame priorities (`system`, `urgent`, `normal`, `low`). |
+| `VALID_KNX_TEMPLATE_FIELDS` | Allowed fields in KNX resource-ID templates. |
+
 ## Serialization Contract
 
 `NormalizedAuthorizationRequest.to_dict()` and `ProtocolOperation.to_dict()` are

@@ -1,5 +1,5 @@
 """
-Cross-protocol normalization contract tests — Phases 5, 7, 10, 11, and 12.
+Cross-protocol normalization contract tests — Phases 5, 7, 10, 11, 12, and 13.
 
 These tests prove that:
 1. REST normalized requests serialize to the canonical shape.
@@ -9,15 +9,16 @@ These tests prove that:
 5. MQTT normalized requests serialize to the canonical shape.
 6. DNP3 normalized requests serialize to the canonical shape.
 7. IEC 61850 normalized requests serialize to the canonical shape.
-8. Required fields are present for all seven protocols.
-9. Protocol-specific evidence is nested under "protocol_evidence".
-10. No authorization decision field is present in the output.
-11. No resolved subject identity field is present (only the unverified hint).
-12. No gateway transport code is invoked.
-13. No basis_core import exists anywhere in basis_adapters.
-14. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, and IEC 61850 outputs share
-    exactly the same top-level field set.
-15. Serialization is deterministic.
+8. KNX normalized requests serialize to the canonical shape.
+9. Required fields are present for all eight protocols.
+10. Protocol-specific evidence is nested under "protocol_evidence".
+11. No authorization decision field is present in the output.
+12. No resolved subject identity field is present (only the unverified hint).
+13. No gateway transport code is invoked.
+14. No basis_core import exists anywhere in basis_adapters.
+15. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX outputs
+    share exactly the same top-level field set.
+16. Serialization is deterministic.
 
 The contract document is: docs/contracts/normalization-contract.md
 The JSON Schema is: schemas/normalized-authorization-request.schema.json
@@ -39,6 +40,8 @@ from basis_adapters.iec61850.mapping import (
     Iec61850Operation,
     Iec61850RouteMapping,
 )
+from basis_adapters.knx.adapter import KnxAdapter
+from basis_adapters.knx.mapping import KnxMappingConfig, KnxOperation, KnxRouteMapping
 from basis_adapters.modbus.adapter import ModbusAdapter
 from basis_adapters.modbus.mapping import ModbusMappingConfig, ModbusOperation, ModbusRouteMapping
 from basis_adapters.models import (
@@ -344,6 +347,42 @@ def _iec61850_normalized() -> NormalizedAuthorizationRequest:
     adapter = _iec61850_adapter()
     result = adapter.normalize(_iec61850_operation())
     assert result.success, f"IEC 61850 normalization failed: {result.error}"
+    assert result.request is not None
+    return result.request
+
+
+def _knx_adapter() -> KnxAdapter:
+    route = KnxRouteMapping(
+        operation="GROUP_VALUE_READ",
+        group_address="*",
+        action="read",
+        resource_type="knx_group_address",
+        resource_id_template="knx:group:{group_address}",
+        name="read-any-group",
+    )
+    config = KnxMappingConfig(routes=[route])
+    ctx = AdapterContext(adapter_id="knx-normalization-test")
+    return KnxAdapter(mapping=config, context=ctx)
+
+
+def _knx_operation(subject_hint: str | None = None) -> KnxOperation:
+    meta: dict[str, Any] = {}
+    if subject_hint is not None:
+        meta["subject_hint"] = subject_hint
+    return KnxOperation(
+        operation="GROUP_VALUE_READ",
+        group_address="1/2/3",
+        individual_address="1.1.5",
+        datapoint_type="1.001",
+        priority="normal",
+        metadata=meta,
+    )
+
+
+def _knx_normalized() -> NormalizedAuthorizationRequest:
+    adapter = _knx_adapter()
+    result = adapter.normalize(_knx_operation())
+    assert result.success, f"KNX normalization failed: {result.error}"
     assert result.request is not None
     return result.request
 
@@ -880,8 +919,87 @@ class TestIec61850CanonicalShape:
 
 
 # ---------------------------------------------------------------------------
-# 6. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, and IEC 61850 share the same
-#    canonical field set
+# 8. KNX serializes to canonical shape
+# ---------------------------------------------------------------------------
+
+
+class TestKnxCanonicalShape:
+    def test_to_dict_returns_dict(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert isinstance(d, dict)
+
+    def test_top_level_fields_exactly_canonical(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert set(d.keys()) == CANONICAL_FIELDS
+
+    def test_protocol_is_knx(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert d["protocol"] == "knx"
+
+    def test_read_action_is_read(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert d["action"] == "read"
+
+    def test_resource_type_is_string(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert isinstance(d["resource_type"], str)
+        assert len(d["resource_type"]) > 0
+
+    def test_resource_id_is_string(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert isinstance(d["resource_id"], str)
+        assert len(d["resource_id"]) > 0
+
+    def test_protocol_evidence_present_and_nested(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert "protocol_evidence" in d
+        assert isinstance(d["protocol_evidence"], dict)
+
+    def test_protocol_evidence_fields_exactly_canonical(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert set(d["protocol_evidence"].keys()) == CANONICAL_EVIDENCE_FIELDS
+
+    def test_protocol_evidence_metadata_contains_knx_fields(self) -> None:
+        d = _knx_normalized().to_dict()
+        meta = d["protocol_evidence"]["metadata"]
+        assert "operation" in meta
+        assert "group_address" in meta
+        assert "individual_address" in meta
+        assert "device_address" in meta
+        assert "communication_object" in meta
+        assert "datapoint_type" in meta
+        assert "payload_type" in meta
+        assert "value" in meta
+        assert "priority" in meta
+        assert "area" in meta
+        assert "line" in meta
+        assert "device" in meta
+
+    def test_no_forbidden_fields(self) -> None:
+        d = _knx_normalized().to_dict()
+        present = FORBIDDEN_FIELDS & set(d.keys())
+        assert not present, f"Forbidden fields found in KNX output: {present}"
+
+    def test_subject_hint_none_when_absent(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert d["subject_hint"] is None
+
+    def test_subject_hint_forwarded_when_present(self) -> None:
+        adapter = _knx_adapter()
+        result = adapter.normalize(_knx_operation(subject_hint="operator@example.internal"))
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["subject_hint"] == "operator@example.internal"
+
+    def test_output_is_json_serializable(self) -> None:
+        d = _knx_normalized().to_dict()
+        encoded = json.dumps(d)
+        assert len(encoded) > 0
+
+
+# ---------------------------------------------------------------------------
+# 6. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX share the
+#    same canonical field set
 # ---------------------------------------------------------------------------
 
 
@@ -1075,7 +1193,70 @@ class TestCrossProtocolFieldSetParity:
             f"Field set mismatch:\n  IEC 61850-only: {iec61850_only}\n  DNP3-only: {dnp3_only}"
         )
 
-    def test_all_seven_evidence_field_sets_identical(self) -> None:
+    def test_knx_rest_top_level_field_sets_identical(self) -> None:
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        rest_keys = set(_rest_normalized().to_dict().keys())
+        knx_only = knx_keys - rest_keys
+        rest_only = rest_keys - knx_keys
+        assert knx_keys == rest_keys, (
+            f"Field set mismatch:\n  KNX-only: {knx_only}\n  REST-only: {rest_only}"
+        )
+
+    def test_knx_bacnet_top_level_field_sets_identical(self) -> None:
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        bacnet_keys = set(_bacnet_normalized().to_dict().keys())
+        knx_only = knx_keys - bacnet_keys
+        bacnet_only = bacnet_keys - knx_keys
+        assert knx_keys == bacnet_keys, (
+            f"Field set mismatch:\n  KNX-only: {knx_only}\n  BACnet-only: {bacnet_only}"
+        )
+
+    def test_knx_modbus_top_level_field_sets_identical(self) -> None:
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        knx_only = knx_keys - modbus_keys
+        modbus_only = modbus_keys - knx_keys
+        assert knx_keys == modbus_keys, (
+            f"Field set mismatch:\n  KNX-only: {knx_only}\n  Modbus-only: {modbus_only}"
+        )
+
+    def test_knx_opcua_top_level_field_sets_identical(self) -> None:
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        knx_only = knx_keys - opcua_keys
+        opcua_only = opcua_keys - knx_keys
+        assert knx_keys == opcua_keys, (
+            f"Field set mismatch:\n  KNX-only: {knx_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_knx_mqtt_top_level_field_sets_identical(self) -> None:
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        knx_only = knx_keys - mqtt_keys
+        mqtt_only = mqtt_keys - knx_keys
+        assert knx_keys == mqtt_keys, (
+            f"Field set mismatch:\n  KNX-only: {knx_only}\n  MQTT-only: {mqtt_only}"
+        )
+
+    def test_knx_dnp3_top_level_field_sets_identical(self) -> None:
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        knx_only = knx_keys - dnp3_keys
+        dnp3_only = dnp3_keys - knx_keys
+        assert knx_keys == dnp3_keys, (
+            f"Field set mismatch:\n  KNX-only: {knx_only}\n  DNP3-only: {dnp3_only}"
+        )
+
+    def test_knx_iec61850_top_level_field_sets_identical(self) -> None:
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        knx_only = knx_keys - iec61850_keys
+        iec61850_only = iec61850_keys - knx_keys
+        assert knx_keys == iec61850_keys, (
+            f"Field set mismatch:\n  KNX-only: {knx_only}\n  IEC 61850-only: {iec61850_only}"
+        )
+
+    def test_all_eight_evidence_field_sets_identical(self) -> None:
         rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
         bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
         modbus_ev = set(_modbus_normalized().to_dict()["protocol_evidence"].keys())
@@ -1083,10 +1264,20 @@ class TestCrossProtocolFieldSetParity:
         mqtt_ev = set(_mqtt_normalized().to_dict()["protocol_evidence"].keys())
         dnp3_ev = set(_dnp3_normalized().to_dict()["protocol_evidence"].keys())
         iec61850_ev = set(_iec61850_normalized().to_dict()["protocol_evidence"].keys())
-        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev == mqtt_ev == dnp3_ev == iec61850_ev, (
+        knx_ev = set(_knx_normalized().to_dict()["protocol_evidence"].keys())
+        assert (
+            rest_ev
+            == bacnet_ev
+            == modbus_ev
+            == opcua_ev
+            == mqtt_ev
+            == dnp3_ev
+            == iec61850_ev
+            == knx_ev
+        ), (
             f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, "
             f"Modbus={modbus_ev}, OPC UA={opcua_ev}, MQTT={mqtt_ev}, DNP3={dnp3_ev}, "
-            f"IEC 61850={iec61850_ev}"
+            f"IEC 61850={iec61850_ev}, KNX={knx_ev}"
         )
 
     def test_all_protocols_have_correct_protocol_field(self) -> None:
@@ -1097,6 +1288,7 @@ class TestCrossProtocolFieldSetParity:
         assert _mqtt_normalized().to_dict()["protocol"] == "mqtt"
         assert _dnp3_normalized().to_dict()["protocol"] == "dnp3"
         assert _iec61850_normalized().to_dict()["protocol"] == "iec61850"
+        assert _knx_normalized().to_dict()["protocol"] == "knx"
 
     def test_all_protocols_produce_read_action_for_read_operations(self) -> None:
         assert _rest_normalized().to_dict()["action"] == "read"
@@ -1105,6 +1297,7 @@ class TestCrossProtocolFieldSetParity:
         assert _opcua_normalized().to_dict()["action"] == "read"
         assert _dnp3_normalized().to_dict()["action"] == "read"
         assert _iec61850_normalized().to_dict()["action"] == "read"
+        assert _knx_normalized().to_dict()["action"] == "read"
 
 
 # ---------------------------------------------------------------------------
@@ -1176,6 +1369,15 @@ class TestSerializationDeterminism:
         r2 = _iec61850_normalized()
         assert r1.to_dict() == r2.to_dict()
 
+    def test_knx_deterministic_across_calls(self) -> None:
+        r = _knx_normalized()
+        assert r.to_dict() == r.to_dict()
+
+    def test_knx_deterministic_across_instances(self) -> None:
+        r1 = _knx_normalized()
+        r2 = _knx_normalized()
+        assert r1.to_dict() == r2.to_dict()
+
 
 # ---------------------------------------------------------------------------
 # 7. Isolation — no basis_core import, no gateway transport
@@ -1232,6 +1434,7 @@ class TestAdapterIsolation:
             _mqtt_normalized().to_dict()
             _dnp3_normalized().to_dict()
             _iec61850_normalized().to_dict()
+            _knx_normalized().to_dict()
         finally:
             socket.getaddrinfo = original_getaddrinfo  # type: ignore[method-assign]
 
@@ -1324,3 +1527,15 @@ class TestProtocolEvidencePresence:
     def test_iec61850_evidence_path_encodes_hierarchy(self) -> None:
         d = _iec61850_normalized().to_dict()
         assert d["protocol_evidence"]["path"] == "ied:ied-sub1/ld:MEAS/ln:MMXU1/do:TotW/da:mag"
+
+    def test_knx_evidence_protocol_matches_parent(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert d["protocol_evidence"]["protocol"] == d["protocol"]
+
+    def test_knx_evidence_method_is_operation_name(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert d["protocol_evidence"]["method"] == "GROUP_VALUE_READ"
+
+    def test_knx_evidence_path_encodes_group_address(self) -> None:
+        d = _knx_normalized().to_dict()
+        assert d["protocol_evidence"]["path"] == "group:1/2/3"

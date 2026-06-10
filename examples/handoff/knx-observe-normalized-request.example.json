@@ -1,0 +1,27 @@
+{
+  "_comment": "Example handoff payload: KNX adapter normalized request for an OBSERVE intent (source operation: explicit intent to monitor group address '2/0/14' for datapoint updates, datapoint type 9.001 temperature). Produced by KnxAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). OBSERVE normalizes to 'subscribe' — the adapter implements no bus sniffing, no multicast monitoring, no KNX/IP routing or tunneling, and retains no bus state. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live KNX communication.",
+  "protocol": "knx",
+  "action": "subscribe",
+  "resource_type": "knx_group_address",
+  "resource_id": "knx:group:2/0/14",
+  "protocol_evidence": {
+    "protocol": "knx",
+    "method": "OBSERVE",
+    "path": "group:2/0/14",
+    "metadata": {
+      "operation": "OBSERVE",
+      "group_address": "2/0/14",
+      "individual_address": null,
+      "device_address": null,
+      "communication_object": null,
+      "datapoint_type": "9.001",
+      "payload_type": null,
+      "value": null,
+      "priority": null,
+      "area": null,
+      "line": null,
+      "device": null
+    }
+  },
+  "subject_hint": null
+}

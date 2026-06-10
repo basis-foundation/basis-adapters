@@ -17,9 +17,11 @@ Validated pairs:
    deliberately invalid DNP3 mapping example FAILS validation.
 8. IEC 61850 mapping example against iec61850-mapping.schema.json, and the
    deliberately invalid IEC 61850 mapping example FAILS validation.
-9. All handoff examples against normalized-authorization-request.schema.json.
-10. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850)
-    against the normalized request schema — schemas must match the
+9. KNX mapping example against knx-mapping.schema.json, and the deliberately
+   invalid KNX mapping example FAILS validation.
+10. All handoff examples against normalized-authorization-request.schema.json.
+11. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850,
+    KNX) against the normalized request schema — schemas must match the
     implementation, not just the example files.
 
 Convention: keys beginning with "_" (e.g. "_comment", "_error") are
@@ -43,6 +45,7 @@ from jsonschema.exceptions import ValidationError
 from basis_adapters.bacnet import BacnetAdapter, BacnetMappingConfig, BacnetOperation
 from basis_adapters.dnp3 import Dnp3Adapter, Dnp3MappingConfig, Dnp3Operation
 from basis_adapters.iec61850 import Iec61850Adapter, Iec61850MappingConfig, Iec61850Operation
+from basis_adapters.knx import KnxAdapter, KnxMappingConfig, KnxOperation
 from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
 from basis_adapters.models import AdapterContext, ProtocolOperation
 from basis_adapters.mqtt import MqttAdapter, MqttMappingConfig, MqttOperation
@@ -60,6 +63,7 @@ OPCUA_MAPPING_SCHEMA = SCHEMAS / "opcua-mapping.schema.json"
 MQTT_MAPPING_SCHEMA = SCHEMAS / "mqtt-mapping.schema.json"
 DNP3_MAPPING_SCHEMA = SCHEMAS / "dnp3-mapping.schema.json"
 IEC61850_MAPPING_SCHEMA = SCHEMAS / "iec61850-mapping.schema.json"
+KNX_MAPPING_SCHEMA = SCHEMAS / "knx-mapping.schema.json"
 NORMALIZED_REQUEST_SCHEMA = SCHEMAS / "normalized-authorization-request.schema.json"
 
 
@@ -142,6 +146,14 @@ class TestMappingExamplesMatchSchemas:
         with pytest.raises(ValidationError):
             validator_for(IEC61850_MAPPING_SCHEMA).validate(instance)
 
+    def test_knx_mapping_example_matches_schema(self) -> None:
+        validate_example(KNX_MAPPING_SCHEMA, EXAMPLES / "knx" / "mapping.example.json")
+
+    def test_knx_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(load_json(EXAMPLES / "knx" / "mapping-invalid.example.json"))
+        with pytest.raises(ValidationError):
+            validator_for(KNX_MAPPING_SCHEMA).validate(instance)
+
 
 class TestHandoffExamplesMatchNormalizedRequestSchema:
     @pytest.mark.parametrize(
@@ -158,6 +170,9 @@ class TestHandoffExamplesMatchNormalizedRequestSchema:
             "iec61850-read-normalized-request.example.json",
             "iec61850-direct-operate-normalized-request.example.json",
             "iec61850-enable-reporting-normalized-request.example.json",
+            "knx-group-value-read-normalized-request.example.json",
+            "knx-group-value-write-normalized-request.example.json",
+            "knx-observe-normalized-request.example.json",
         ],
     )
     def test_handoff_example_matches_schema(self, example_name: str) -> None:
@@ -396,6 +411,63 @@ class TestLiveAdapterOutputMatchesNormalizedRequestSchema:
         assert d["resource_id"] == "iec61850:ied:ied-sub1/ld:MEAS/ln:LLN0/rcb:urcbMX01"
         validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
 
+    def test_knx_group_value_read_output_matches_schema(self) -> None:
+        config = KnxMappingConfig.from_dict(load_json(EXAMPLES / "knx" / "mapping.example.json"))
+        adapter = KnxAdapter(mapping=config, context=AdapterContext(adapter_id="knx-schema"))
+        op = KnxOperation(
+            operation="GROUP_VALUE_READ",
+            group_address="1/2/3",
+            individual_address="1.1.5",
+            datapoint_type="1.001",
+            priority="normal",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "read"
+        assert d["resource_id"] == "knx:group:1/2/3"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_knx_group_value_write_output_matches_schema(self) -> None:
+        config = KnxMappingConfig.from_dict(load_json(EXAMPLES / "knx" / "mapping.example.json"))
+        adapter = KnxAdapter(mapping=config, context=AdapterContext(adapter_id="knx-schema"))
+        op = KnxOperation(
+            operation="GROUP_VALUE_WRITE",
+            group_address="1/2/3",
+            individual_address="1.1.5",
+            communication_object=4,
+            datapoint_type="1.001",
+            payload_type="boolean",
+            value=True,
+            priority="normal",
+            area=1,
+            line=1,
+            device=5,
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "write"
+        # The written value stays in evidence, never in the resource ID.
+        assert d["resource_id"] == "knx:group:1/2/3"
+        assert d["protocol_evidence"]["metadata"]["value"] is True
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_knx_observe_output_matches_schema(self) -> None:
+        config = KnxMappingConfig.from_dict(load_json(EXAMPLES / "knx" / "mapping.example.json"))
+        adapter = KnxAdapter(mapping=config, context=AdapterContext(adapter_id="knx-schema"))
+        op = KnxOperation(
+            operation="OBSERVE",
+            group_address="2/0/14",
+            datapoint_type="9.001",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "subscribe"
+        assert d["resource_id"] == "knx:group:2/0/14"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
 
 class TestSchemasAreThemselvesValid:
     @pytest.mark.parametrize(
@@ -408,6 +480,7 @@ class TestSchemasAreThemselvesValid:
             MQTT_MAPPING_SCHEMA,
             DNP3_MAPPING_SCHEMA,
             IEC61850_MAPPING_SCHEMA,
+            KNX_MAPPING_SCHEMA,
             NORMALIZED_REQUEST_SCHEMA,
         ],
         ids=lambda p: p.name,
