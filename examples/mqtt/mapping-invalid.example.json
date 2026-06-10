@@ -1,0 +1,54 @@
+{
+  "_comment": "Intentionally invalid MQTT mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by MqttMappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized MQTT operation 'CONNECT' — only PUBLISH, SUBSCRIBE, and '*' are accepted",
+      "name": "bad-operation",
+      "operation": "CONNECT",
+      "topic": "building/ahu-1/setpoint",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic}"
+    },
+    {
+      "_error": "INVALID: topic is empty — must be a non-empty string or '*'",
+      "name": "empty-topic",
+      "operation": "PUBLISH",
+      "topic": "",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic}"
+    },
+    {
+      "_error": "INVALID: action 'fly' is not a recognized action verb",
+      "name": "invalid-action",
+      "operation": "PUBLISH",
+      "topic": "building/ahu-1/setpoint",
+      "action": "fly",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "operation": "SUBSCRIBE",
+      "topic": "building/ahu-1/telemetry",
+      "resource_type": "",
+      "resource_id_template": "mqtt:{topic}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {node_id} which is not a valid MQTT template field",
+      "name": "unknown-template-field",
+      "operation": "PUBLISH",
+      "topic": "building/ahu-1/setpoint",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{node_id}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{topic' — missing closing brace",
+      "name": "malformed-template",
+      "operation": "PUBLISH",
+      "topic": "building/ahu-1/setpoint",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic"
+    }
+  ]
+}

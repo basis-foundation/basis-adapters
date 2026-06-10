@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://basis-foundation.example/schemas/mqtt-mapping.schema.json",
+  "title": "MqttMappingConfig",
+  "description": "Configuration schema for the MQTT adapter mapping. Describes how MQTT PUBLISH and SUBSCRIBE intents are normalized into BASIS authorization requests. Topic matching is literal string equality (or the '*' sentinel) — no MQTT topic-filter matching is performed, and MQTT wildcards (+, #) in operation topics are preserved verbatim, never expanded.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of route mappings. Routes are evaluated in order; the first match wins.",
+      "items": {
+        "$ref": "#/$defs/MqttRouteMapping"
+      }
+    }
+  },
+  "$defs": {
+    "MqttRouteMapping": {
+      "type": "object",
+      "description": "Maps an MQTT operation and topic to normalized authorization semantics.",
+      "required": ["operation", "topic", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable route name. Must be unique across all routes in the config if non-empty.",
+          "default": ""
+        },
+        "operation": {
+          "type": "string",
+          "description": "MQTT operation to match (protocol-native packet name). Use '*' to match any operation.",
+          "enum": ["PUBLISH", "SUBSCRIBE", "*"]
+        },
+        "topic": {
+          "type": "string",
+          "description": "Exact topic string to match, or '*' to match any topic. Comparison is literal string equality — the adapter performs no MQTT topic-filter matching.",
+          "minLength": 1,
+          "examples": ["building/ahu-1/setpoint", "*"]
+        },
+        "action": {
+          "type": "string",
+          "description": "Normalized action verb. If empty, the default operation→action map is used (PUBLISH→write, SUBSCRIBE→subscribe).",
+          "enum": ["read", "write", "control", "discover", "subscribe", ""],
+          "default": ""
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Normalized resource category, e.g. 'mqtt_topic'.",
+          "minLength": 1,
+          "examples": ["mqtt_topic"]
+        },
+        "resource_id_template": {
+          "type": "string",
+          "description": "Template for the resource ID. May reference {operation}, {topic}, {client_id}, {qos}, {payload_type} using {param} syntax.",
+          "minLength": 1,
+          "examples": ["mqtt:{topic}", "mqtt:{topic}:qos:{qos}"]
+        }
+      }
+    }
+  }
+}

@@ -1,20 +1,21 @@
 """
-Cross-protocol normalization contract tests — Phases 5 and 7.
+Cross-protocol normalization contract tests — Phases 5, 7, and 10.
 
 These tests prove that:
 1. REST normalized requests serialize to the canonical shape.
 2. BACnet normalized requests serialize to the canonical shape.
 3. Modbus normalized requests serialize to the canonical shape.
 4. OPC UA normalized requests serialize to the canonical shape.
-5. Required fields are present for all four protocols.
-6. Protocol-specific evidence is nested under "protocol_evidence".
-7. No authorization decision field is present in the output.
-8. No resolved subject identity field is present (only the unverified hint).
-9. No gateway transport code is invoked.
-10. No basis_core import exists anywhere in basis_adapters.
-11. REST, BACnet, Modbus, and OPC UA outputs share exactly the same top-level
-    field set.
-12. Serialization is deterministic.
+5. MQTT normalized requests serialize to the canonical shape.
+6. Required fields are present for all five protocols.
+7. Protocol-specific evidence is nested under "protocol_evidence".
+8. No authorization decision field is present in the output.
+9. No resolved subject identity field is present (only the unverified hint).
+10. No gateway transport code is invoked.
+11. No basis_core import exists anywhere in basis_adapters.
+12. REST, BACnet, Modbus, OPC UA, and MQTT outputs share exactly the same
+    top-level field set.
+13. Serialization is deterministic.
 
 The contract document is: docs/contracts/normalization-contract.md
 The JSON Schema is: schemas/normalized-authorization-request.schema.json
@@ -35,6 +36,8 @@ from basis_adapters.models import (
     NormalizedAuthorizationRequest,
     ProtocolOperation,
 )
+from basis_adapters.mqtt.adapter import MqttAdapter
+from basis_adapters.mqtt.mapping import MqttMappingConfig, MqttOperation, MqttRouteMapping
 from basis_adapters.opcua.adapter import OpcuaAdapter
 from basis_adapters.opcua.mapping import OpcuaMappingConfig, OpcuaOperation, OpcuaRouteMapping
 from basis_adapters.rest.adapter import RestAdapter
@@ -211,6 +214,42 @@ def _opcua_normalized() -> NormalizedAuthorizationRequest:
     adapter = _opcua_adapter()
     result = adapter.normalize(_opcua_operation())
     assert result.success, f"OPC UA normalization failed: {result.error}"
+    assert result.request is not None
+    return result.request
+
+
+def _mqtt_adapter() -> MqttAdapter:
+    route = MqttRouteMapping(
+        operation="PUBLISH",
+        topic="*",
+        action="write",
+        resource_type="mqtt_topic",
+        resource_id_template="mqtt:{topic}",
+        name="publish-any",
+    )
+    config = MqttMappingConfig(routes=[route])
+    ctx = AdapterContext(adapter_id="mqtt-normalization-test")
+    return MqttAdapter(mapping=config, context=ctx)
+
+
+def _mqtt_operation(subject_hint: str | None = None) -> MqttOperation:
+    meta: dict[str, Any] = {}
+    if subject_hint is not None:
+        meta["subject_hint"] = subject_hint
+    return MqttOperation(
+        operation="PUBLISH",
+        topic="building/ahu-1/setpoint",
+        client_id="bms-controller-7",
+        qos=1,
+        payload_type="json",
+        metadata=meta,
+    )
+
+
+def _mqtt_normalized() -> NormalizedAuthorizationRequest:
+    adapter = _mqtt_adapter()
+    result = adapter.normalize(_mqtt_operation())
+    assert result.success, f"MQTT normalization failed: {result.error}"
     assert result.request is not None
     return result.request
 
@@ -507,7 +546,81 @@ class TestOpcuaCanonicalShape:
 
 
 # ---------------------------------------------------------------------------
-# 5. REST, BACnet, Modbus, and OPC UA share the same canonical field set
+# 5. MQTT serializes to canonical shape
+# ---------------------------------------------------------------------------
+
+
+class TestMqttCanonicalShape:
+    def test_to_dict_returns_dict(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert isinstance(d, dict)
+
+    def test_top_level_fields_exactly_canonical(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert set(d.keys()) == CANONICAL_FIELDS
+
+    def test_protocol_is_mqtt(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert d["protocol"] == "mqtt"
+
+    def test_publish_action_is_write(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert d["action"] == "write"
+
+    def test_resource_type_is_string(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert isinstance(d["resource_type"], str)
+        assert len(d["resource_type"]) > 0
+
+    def test_resource_id_is_string(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert isinstance(d["resource_id"], str)
+        assert len(d["resource_id"]) > 0
+
+    def test_protocol_evidence_present_and_nested(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert "protocol_evidence" in d
+        assert isinstance(d["protocol_evidence"], dict)
+
+    def test_protocol_evidence_fields_exactly_canonical(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert set(d["protocol_evidence"].keys()) == CANONICAL_EVIDENCE_FIELDS
+
+    def test_protocol_evidence_metadata_contains_mqtt_fields(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        meta = d["protocol_evidence"]["metadata"]
+        assert "operation" in meta
+        assert "topic" in meta
+        assert "client_id" in meta
+        assert "qos" in meta
+        assert "retain" in meta
+        assert "payload_type" in meta
+        assert "protocol_version" in meta
+
+    def test_no_forbidden_fields(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        present = FORBIDDEN_FIELDS & set(d.keys())
+        assert not present, f"Forbidden fields found in MQTT output: {present}"
+
+    def test_subject_hint_none_when_absent(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert d["subject_hint"] is None
+
+    def test_subject_hint_forwarded_when_present(self) -> None:
+        adapter = _mqtt_adapter()
+        result = adapter.normalize(_mqtt_operation(subject_hint="operator@example.internal"))
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["subject_hint"] == "operator@example.internal"
+
+    def test_output_is_json_serializable(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        encoded = json.dumps(d)
+        assert len(encoded) > 0
+
+
+# ---------------------------------------------------------------------------
+# 6. REST, BACnet, Modbus, OPC UA, and MQTT share the same canonical field set
 # ---------------------------------------------------------------------------
 
 
@@ -566,14 +679,51 @@ class TestCrossProtocolFieldSetParity:
             f"Field set mismatch:\n  Modbus-only: {modbus_only}\n  OPC UA-only: {opcua_only}"
         )
 
-    def test_all_four_evidence_field_sets_identical(self) -> None:
+    def test_mqtt_rest_top_level_field_sets_identical(self) -> None:
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        rest_keys = set(_rest_normalized().to_dict().keys())
+        mqtt_only = mqtt_keys - rest_keys
+        rest_only = rest_keys - mqtt_keys
+        assert mqtt_keys == rest_keys, (
+            f"Field set mismatch:\n  MQTT-only: {mqtt_only}\n  REST-only: {rest_only}"
+        )
+
+    def test_mqtt_bacnet_top_level_field_sets_identical(self) -> None:
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        bacnet_keys = set(_bacnet_normalized().to_dict().keys())
+        mqtt_only = mqtt_keys - bacnet_keys
+        bacnet_only = bacnet_keys - mqtt_keys
+        assert mqtt_keys == bacnet_keys, (
+            f"Field set mismatch:\n  MQTT-only: {mqtt_only}\n  BACnet-only: {bacnet_only}"
+        )
+
+    def test_mqtt_modbus_top_level_field_sets_identical(self) -> None:
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        mqtt_only = mqtt_keys - modbus_keys
+        modbus_only = modbus_keys - mqtt_keys
+        assert mqtt_keys == modbus_keys, (
+            f"Field set mismatch:\n  MQTT-only: {mqtt_only}\n  Modbus-only: {modbus_only}"
+        )
+
+    def test_mqtt_opcua_top_level_field_sets_identical(self) -> None:
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        mqtt_only = mqtt_keys - opcua_keys
+        opcua_only = opcua_keys - mqtt_keys
+        assert mqtt_keys == opcua_keys, (
+            f"Field set mismatch:\n  MQTT-only: {mqtt_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_all_five_evidence_field_sets_identical(self) -> None:
         rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
         bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
         modbus_ev = set(_modbus_normalized().to_dict()["protocol_evidence"].keys())
         opcua_ev = set(_opcua_normalized().to_dict()["protocol_evidence"].keys())
-        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev, (
+        mqtt_ev = set(_mqtt_normalized().to_dict()["protocol_evidence"].keys())
+        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev == mqtt_ev, (
             f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, "
-            f"Modbus={modbus_ev}, OPC UA={opcua_ev}"
+            f"Modbus={modbus_ev}, OPC UA={opcua_ev}, MQTT={mqtt_ev}"
         )
 
     def test_all_protocols_have_correct_protocol_field(self) -> None:
@@ -581,6 +731,7 @@ class TestCrossProtocolFieldSetParity:
         assert _bacnet_normalized().to_dict()["protocol"] == "bacnet"
         assert _modbus_normalized().to_dict()["protocol"] == "modbus"
         assert _opcua_normalized().to_dict()["protocol"] == "opcua"
+        assert _mqtt_normalized().to_dict()["protocol"] == "mqtt"
 
     def test_all_protocols_produce_read_action_for_read_operations(self) -> None:
         assert _rest_normalized().to_dict()["action"] == "read"
@@ -629,6 +780,15 @@ class TestSerializationDeterminism:
     def test_opcua_deterministic_across_instances(self) -> None:
         r1 = _opcua_normalized()
         r2 = _opcua_normalized()
+        assert r1.to_dict() == r2.to_dict()
+
+    def test_mqtt_deterministic_across_calls(self) -> None:
+        r = _mqtt_normalized()
+        assert r.to_dict() == r.to_dict()
+
+    def test_mqtt_deterministic_across_instances(self) -> None:
+        r1 = _mqtt_normalized()
+        r2 = _mqtt_normalized()
         assert r1.to_dict() == r2.to_dict()
 
 
@@ -684,6 +844,7 @@ class TestAdapterIsolation:
             _bacnet_normalized().to_dict()
             _modbus_normalized().to_dict()
             _opcua_normalized().to_dict()
+            _mqtt_normalized().to_dict()
         finally:
             socket.getaddrinfo = original_getaddrinfo  # type: ignore[method-assign]
 
@@ -740,3 +901,15 @@ class TestProtocolEvidencePresence:
     def test_opcua_evidence_path_is_node_id(self) -> None:
         d = _opcua_normalized().to_dict()
         assert d["protocol_evidence"]["path"] == "ns=2;s=Building.AHU1.SupplyTemp"
+
+    def test_mqtt_evidence_protocol_matches_parent(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert d["protocol_evidence"]["protocol"] == d["protocol"]
+
+    def test_mqtt_evidence_method_is_operation_name(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert d["protocol_evidence"]["method"] == "PUBLISH"
+
+    def test_mqtt_evidence_path_is_topic(self) -> None:
+        d = _mqtt_normalized().to_dict()
+        assert d["protocol_evidence"]["path"] == "building/ahu-1/setpoint"

@@ -74,6 +74,19 @@ detail and may change without notice.
 | `VALID_OPCUA_SERVICES` | Allowed OPC UA service names (`Read`, `Write`, `Call`, `Subscribe`, `Browse`). |
 | `VALID_OPCUA_TEMPLATE_FIELDS` | Allowed fields in OPC UA resource-ID templates. |
 
+## MQTT (`basis_adapters.mqtt`)
+
+| Name | Purpose |
+|---|---|
+| `MqttAdapter` | Normalizes MQTT PUBLISH/SUBSCRIBE intents into a `NormalizedAuthorizationRequest`. |
+| `MqttMappingConfig` | Validated MQTT mapping configuration; `from_dict()` constructor. Schema: `schemas/mqtt-mapping.schema.json`. |
+| `MqttOperation` | Typed MQTT operation (operation, topic, client ID, QoS, retain, payload type, protocol version). |
+| `MqttRouteMapping` | A single MQTT route mapping entry. |
+| `VALID_MQTT_OPERATIONS` | Allowed MQTT operation names (`PUBLISH`, `SUBSCRIBE`). |
+| `VALID_MQTT_PAYLOAD_TYPES` | Allowed declared payload types (`json`, `text`, `binary`, `unknown`). |
+| `VALID_MQTT_QOS_LEVELS` | Allowed QoS levels (0, 1, 2). |
+| `VALID_MQTT_TEMPLATE_FIELDS` | Allowed fields in MQTT resource-ID templates. |
+
 ## Serialization Contract
 
 `NormalizedAuthorizationRequest.to_dict()` and `ProtocolOperation.to_dict()` are

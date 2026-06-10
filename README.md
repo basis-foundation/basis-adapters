@@ -45,15 +45,16 @@ Adapters never see the decision. They do not allow or deny anything.
 | BACnet | `basis_adapters.bacnet` | Normalization-complete |
 | Modbus | `basis_adapters.modbus` | Normalization-complete |
 | OPC UA | `basis_adapters.opcua` | Normalization-complete |
+| MQTT | `basis_adapters.mqtt` | Normalization-complete |
 
 **Normalization-complete** means the adapter's normalization model and
 architecture are implemented, contract-tested, and stable: it accepts typed
 protocol operations and emits the canonical normalized request shape. It does
 **not** mean a full wire-protocol implementation — there is no BACnet/IP stack,
-no Modbus TCP parser, no OPC UA secure channel, no live networking of any kind.
-Adapters model protocol intent, not wire format.
+no Modbus TCP parser, no OPC UA secure channel, no MQTT broker or client, no
+live networking of any kind. Adapters model protocol intent, not wire format.
 
-All four adapters emit the same canonical normalized request shape, defined in
+All five adapters emit the same canonical normalized request shape, defined in
 [`schemas/normalized-authorization-request.schema.json`](schemas/normalized-authorization-request.schema.json)
 and proven by cross-protocol contract tests.
 
@@ -62,8 +63,9 @@ and proven by cross-protocol contract tests.
 Protocols do not converge. Outputs converge.
 
 REST stays resource-oriented, BACnet stays object-oriented, Modbus stays
-register-oriented, OPC UA keeps its typed address space — adapters do not paper
-over those differences on the input side. What converges is the output: every
+register-oriented, OPC UA keeps its typed address space, MQTT stays
+topic-addressed pub/sub — adapters do not paper over those differences on the
+input side. What converges is the output: every
 adapter emits the same Normalized Authorization Request, and that normalized
 request is the architectural invariant the rest of BASIS builds on. See
 [docs/contracts/normalization-contract.md](docs/contracts/normalization-contract.md).
@@ -76,10 +78,10 @@ Completed adapters (normalization-complete):
 - BACnet
 - Modbus
 - OPC UA
+- MQTT
 
 Planned adapters:
 
-- MQTT
 - DNP3
 - IEC 61850
 - KNX
@@ -92,8 +94,8 @@ and each must conform to the canonical normalized request shape (see
 ## What Adapters Do
 
 - Translate protocol operations (HTTP requests, BACnet service primitives, Modbus
-  function requests, OPC UA service requests) into protocol-agnostic authorization
-  requests via declarative, validated mapping configs.
+  function requests, OPC UA service requests, MQTT publish/subscribe intents) into
+  protocol-agnostic authorization requests via declarative, validated mapping configs.
 - Preserve the original operation verbatim as `protocol_evidence` for audit.
 - **Fail closed**: if normalization fails (`result.success is False`), the caller
   must not forward the operation. A normalization failure is not an authorization
@@ -148,9 +150,10 @@ else:
     print(f"Normalization failed: {result.error}")
 ```
 
-BACnet, Modbus, and OPC UA follow the identical pattern — see the package
+BACnet, Modbus, OPC UA, and MQTT follow the identical pattern — see the package
 docstrings (`basis_adapters.bacnet`, `basis_adapters.modbus`,
-`basis_adapters.opcua`) and [docs/examples.md](docs/examples.md).
+`basis_adapters.opcua`, `basis_adapters.mqtt`) and
+[docs/examples.md](docs/examples.md).
 
 ---
 
@@ -190,7 +193,7 @@ and on pushes to `main`. CI type-checks `src` only — the configured gate.
 | Schema/example validation | [docs/schema-validation.md](docs/schema-validation.md) |
 | Development workflow | [docs/development-workflow.md](docs/development-workflow.md) |
 | Release readiness (v0.1.0 gate) | [docs/release-readiness.md](docs/release-readiness.md) |
-| Implementation history (Phases 1–7) | [docs/implementation/](docs/implementation/) |
+| Implementation history (Phases 1–10) | [docs/implementation/](docs/implementation/) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Security policy | [SECURITY.md](SECURITY.md) |
 

@@ -1,0 +1,37 @@
+{
+  "_comment": "Example MQTT adapter mapping configuration. Routes are evaluated in order; the first match wins. Use '*' as a wildcard for operation or topic. Topic matching is literal string equality — the adapter performs no MQTT topic-filter matching, and MQTT wildcards (+, #) in operation topics are preserved verbatim, never expanded.",
+  "routes": [
+    {
+      "name": "publish-setpoint",
+      "operation": "PUBLISH",
+      "topic": "building/ahu-1/setpoint",
+      "action": "write",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic}"
+    },
+    {
+      "name": "subscribe-telemetry",
+      "operation": "SUBSCRIBE",
+      "topic": "building/ahu-1/telemetry",
+      "action": "subscribe",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic}"
+    },
+    {
+      "name": "publish-any-topic",
+      "operation": "PUBLISH",
+      "topic": "*",
+      "action": "",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic}"
+    },
+    {
+      "name": "subscribe-any-topic",
+      "operation": "SUBSCRIBE",
+      "topic": "*",
+      "action": "",
+      "resource_type": "mqtt_topic",
+      "resource_id_template": "mqtt:{topic}"
+    }
+  ]
+}

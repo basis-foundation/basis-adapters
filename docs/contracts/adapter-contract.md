@@ -1,9 +1,9 @@
 # Adapter Contract
 
 This document defines the engineering contract that every adapter in the
-basis-adapters repository must satisfy. It applies to all four implemented
-adapters (REST, BACnet, Modbus, OPC UA) and to every future adapter
-(MQTT, DNP3, etc.).
+basis-adapters repository must satisfy. It applies to all five implemented
+adapters (REST, BACnet, Modbus, OPC UA, MQTT) and to every future adapter
+(DNP3, IEC 61850, etc.).
 
 ---
 
@@ -152,8 +152,8 @@ raise `UnknownRouteError`. Both are subtypes of `AdapterError`.
 
 ## Compatibility Expectations for Future Adapters
 
-All future adapters (MQTT, DNP3, IEC 61850, KNX, Niagara, etc.) must, like the
-four implemented adapters:
+All future adapters (DNP3, IEC 61850, KNX, Niagara, etc.) must, like the
+five implemented adapters:
 
 1. Accept protocol-specific input and return `AdapterResult`.
 2. Produce `NormalizedAuthorizationRequest` using the same frozen model.

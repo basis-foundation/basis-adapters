@@ -1,0 +1,22 @@
+{
+  "_comment": "Example handoff payload: MQTT adapter normalized request for a SUBSCRIBE intent (source operation: SUBSCRIBE to topic filter 'building/+/telemetry', qos 0). Note the MQTT wildcard '+' in the topic: it is preserved verbatim in both resource_id and evidence — the adapter never expands or matches wildcards. Whether a wildcard subscription should be authorized is a policy question for basis-core, not the adapter. This is a handoff artifact — not a decision, not enforcement, not authentication.",
+  "protocol": "mqtt",
+  "action": "subscribe",
+  "resource_type": "mqtt_topic",
+  "resource_id": "mqtt:building/+/telemetry",
+  "protocol_evidence": {
+    "protocol": "mqtt",
+    "method": "SUBSCRIBE",
+    "path": "building/+/telemetry",
+    "metadata": {
+      "operation": "SUBSCRIBE",
+      "topic": "building/+/telemetry",
+      "client_id": "energy-dashboard-2",
+      "qos": 0,
+      "retain": false,
+      "payload_type": "unknown",
+      "protocol_version": "3.1.1"
+    }
+  },
+  "subject_hint": null
+}

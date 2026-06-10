@@ -17,7 +17,8 @@ Adapters do not answer whether the request should be allowed.
 
 - Protocol-specific parsing: understanding HTTP methods and paths, BACnet object
   identifiers and property references, Modbus function codes and register addresses,
-  OPC UA node identifiers and service requests.
+  OPC UA node identifiers and service requests, MQTT topics and publish/subscribe
+  operations.
 - Normalization: mapping protocol operations to a stable, protocol-agnostic
   authorization request shape (`NormalizedAuthorizationRequest`).
 - Mapping configuration: rules that describe which protocol operations correspond to
@@ -103,10 +104,10 @@ security bypass. Adapters must not receive, inspect, or act on authorization dec
 
 ## Current Protocol Support
 
-Four adapters are implemented and normalization-complete: REST, BACnet, Modbus,
-and OPC UA. All four emit the canonical Normalized Authorization Request shape
-and participate in the cross-protocol contract tests. Planned protocols (MQTT,
-DNP3, IEC 61850, KNX, Niagara) are tracked in the README roadmap.
+Five adapters are implemented and normalization-complete: REST, BACnet, Modbus,
+OPC UA, and MQTT. All five emit the canonical Normalized Authorization Request
+shape and participate in the cross-protocol contract tests. Planned protocols
+(DNP3, IEC 61850, KNX, Niagara) are tracked in the README roadmap.
 
 ### REST
 
@@ -140,6 +141,14 @@ OPC UA exposes a typed, hierarchical address space with first-class methods and
 subscriptions. Its `Read`, `Write`, `Call`, `Subscribe`, and `Browse` services
 normalize to the canonical action vocabulary, including the `execute` and
 `browse` verbs. See [opcua-adapter.md](opcua-adapter.md).
+
+### MQTT
+
+MQTT is broker-mediated publish/subscribe over a topic namespace. `PUBLISH`
+normalizes to `write` and `SUBSCRIBE` to `subscribe` — the existing action
+vocabulary, with no new verbs. Wildcard topic filters (`+`, `#`) are preserved
+verbatim and never expanded; wildcard authorization is a policy question, not
+a normalization question. See [mqtt-adapter.md](mqtt-adapter.md).
 
 ---
 
