@@ -1,0 +1,30 @@
+{
+  "_comment": "Example handoff payload: DNP3 adapter normalized request for a READ intent (source operation: master 'master-1' at address 1 reads analog input point 3, object group 30 variation 5, from outstation 'os-14' at address 10). Produced by Dnp3Adapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). This is a handoff artifact — not a decision, not enforcement, not authentication. Addresses and master_id are evidence only, never verified identity.",
+  "protocol": "dnp3",
+  "action": "read",
+  "resource_type": "dnp3_point",
+  "resource_id": "dnp3:outstation:os-14/analog_input/3",
+  "protocol_evidence": {
+    "protocol": "dnp3",
+    "method": "READ",
+    "path": "outstation:os-14/analog_input/3",
+    "metadata": {
+      "operation": "READ",
+      "source_address": 1,
+      "destination_address": 10,
+      "outstation_id": "os-14",
+      "master_id": "master-1",
+      "object_group": 30,
+      "variation": 5,
+      "point_index": 3,
+      "point_type": "analog_input",
+      "function_code": 1,
+      "qualifier": 40,
+      "control_code": null,
+      "control_model": null,
+      "event_class": null,
+      "value": null
+    }
+  },
+  "subject_hint": null
+}

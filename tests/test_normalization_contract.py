@@ -1,5 +1,5 @@
 """
-Cross-protocol normalization contract tests — Phases 5, 7, and 10.
+Cross-protocol normalization contract tests — Phases 5, 7, 10, and 11.
 
 These tests prove that:
 1. REST normalized requests serialize to the canonical shape.
@@ -7,15 +7,16 @@ These tests prove that:
 3. Modbus normalized requests serialize to the canonical shape.
 4. OPC UA normalized requests serialize to the canonical shape.
 5. MQTT normalized requests serialize to the canonical shape.
-6. Required fields are present for all five protocols.
-7. Protocol-specific evidence is nested under "protocol_evidence".
-8. No authorization decision field is present in the output.
-9. No resolved subject identity field is present (only the unverified hint).
-10. No gateway transport code is invoked.
-11. No basis_core import exists anywhere in basis_adapters.
-12. REST, BACnet, Modbus, OPC UA, and MQTT outputs share exactly the same
-    top-level field set.
-13. Serialization is deterministic.
+6. DNP3 normalized requests serialize to the canonical shape.
+7. Required fields are present for all six protocols.
+8. Protocol-specific evidence is nested under "protocol_evidence".
+9. No authorization decision field is present in the output.
+10. No resolved subject identity field is present (only the unverified hint).
+11. No gateway transport code is invoked.
+12. No basis_core import exists anywhere in basis_adapters.
+13. REST, BACnet, Modbus, OPC UA, MQTT, and DNP3 outputs share exactly the
+    same top-level field set.
+14. Serialization is deterministic.
 
 The contract document is: docs/contracts/normalization-contract.md
 The JSON Schema is: schemas/normalized-authorization-request.schema.json
@@ -29,6 +30,8 @@ from typing import Any
 
 from basis_adapters.bacnet.adapter import BacnetAdapter
 from basis_adapters.bacnet.mapping import BacnetMappingConfig, BacnetOperation, BacnetRouteMapping
+from basis_adapters.dnp3.adapter import Dnp3Adapter
+from basis_adapters.dnp3.mapping import Dnp3MappingConfig, Dnp3Operation, Dnp3RouteMapping
 from basis_adapters.modbus.adapter import ModbusAdapter
 from basis_adapters.modbus.mapping import ModbusMappingConfig, ModbusOperation, ModbusRouteMapping
 from basis_adapters.models import (
@@ -250,6 +253,47 @@ def _mqtt_normalized() -> NormalizedAuthorizationRequest:
     adapter = _mqtt_adapter()
     result = adapter.normalize(_mqtt_operation())
     assert result.success, f"MQTT normalization failed: {result.error}"
+    assert result.request is not None
+    return result.request
+
+
+def _dnp3_adapter() -> Dnp3Adapter:
+    route = Dnp3RouteMapping(
+        operation="READ",
+        point_type="analog_input",
+        action="read",
+        resource_type="dnp3_point",
+        resource_id_template="dnp3:outstation:{outstation_id}/analog_input/{point_index}",
+        name="read-analog-input",
+    )
+    config = Dnp3MappingConfig(routes=[route])
+    ctx = AdapterContext(adapter_id="dnp3-normalization-test")
+    return Dnp3Adapter(mapping=config, context=ctx)
+
+
+def _dnp3_operation(subject_hint: str | None = None) -> Dnp3Operation:
+    meta: dict[str, Any] = {}
+    if subject_hint is not None:
+        meta["subject_hint"] = subject_hint
+    return Dnp3Operation(
+        operation="READ",
+        source_address=1,
+        destination_address=10,
+        outstation_id="os-14",
+        master_id="master-1",
+        object_group=30,
+        variation=5,
+        point_index=3,
+        point_type="analog_input",
+        function_code=1,
+        metadata=meta,
+    )
+
+
+def _dnp3_normalized() -> NormalizedAuthorizationRequest:
+    adapter = _dnp3_adapter()
+    result = adapter.normalize(_dnp3_operation())
+    assert result.success, f"DNP3 normalization failed: {result.error}"
     assert result.request is not None
     return result.request
 
@@ -620,7 +664,89 @@ class TestMqttCanonicalShape:
 
 
 # ---------------------------------------------------------------------------
-# 6. REST, BACnet, Modbus, OPC UA, and MQTT share the same canonical field set
+# 6. DNP3 serializes to canonical shape
+# ---------------------------------------------------------------------------
+
+
+class TestDnp3CanonicalShape:
+    def test_to_dict_returns_dict(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert isinstance(d, dict)
+
+    def test_top_level_fields_exactly_canonical(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert set(d.keys()) == CANONICAL_FIELDS
+
+    def test_protocol_is_dnp3(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert d["protocol"] == "dnp3"
+
+    def test_read_action_is_read(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert d["action"] == "read"
+
+    def test_resource_type_is_string(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert isinstance(d["resource_type"], str)
+        assert len(d["resource_type"]) > 0
+
+    def test_resource_id_is_string(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert isinstance(d["resource_id"], str)
+        assert len(d["resource_id"]) > 0
+
+    def test_protocol_evidence_present_and_nested(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert "protocol_evidence" in d
+        assert isinstance(d["protocol_evidence"], dict)
+
+    def test_protocol_evidence_fields_exactly_canonical(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert set(d["protocol_evidence"].keys()) == CANONICAL_EVIDENCE_FIELDS
+
+    def test_protocol_evidence_metadata_contains_dnp3_fields(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        meta = d["protocol_evidence"]["metadata"]
+        assert "operation" in meta
+        assert "source_address" in meta
+        assert "destination_address" in meta
+        assert "outstation_id" in meta
+        assert "master_id" in meta
+        assert "object_group" in meta
+        assert "variation" in meta
+        assert "point_index" in meta
+        assert "point_type" in meta
+        assert "function_code" in meta
+        assert "qualifier" in meta
+        assert "control_code" in meta
+        assert "control_model" in meta
+        assert "event_class" in meta
+        assert "value" in meta
+
+    def test_no_forbidden_fields(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        present = FORBIDDEN_FIELDS & set(d.keys())
+        assert not present, f"Forbidden fields found in DNP3 output: {present}"
+
+    def test_subject_hint_none_when_absent(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert d["subject_hint"] is None
+
+    def test_subject_hint_forwarded_when_present(self) -> None:
+        adapter = _dnp3_adapter()
+        result = adapter.normalize(_dnp3_operation(subject_hint="operator@example.internal"))
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["subject_hint"] == "operator@example.internal"
+
+    def test_output_is_json_serializable(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        encoded = json.dumps(d)
+        assert len(encoded) > 0
+
+
+# ---------------------------------------------------------------------------
+# 6. REST, BACnet, Modbus, OPC UA, MQTT, and DNP3 share the same canonical field set
 # ---------------------------------------------------------------------------
 
 
@@ -715,15 +841,61 @@ class TestCrossProtocolFieldSetParity:
             f"Field set mismatch:\n  MQTT-only: {mqtt_only}\n  OPC UA-only: {opcua_only}"
         )
 
-    def test_all_five_evidence_field_sets_identical(self) -> None:
+    def test_dnp3_rest_top_level_field_sets_identical(self) -> None:
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        rest_keys = set(_rest_normalized().to_dict().keys())
+        dnp3_only = dnp3_keys - rest_keys
+        rest_only = rest_keys - dnp3_keys
+        assert dnp3_keys == rest_keys, (
+            f"Field set mismatch:\n  DNP3-only: {dnp3_only}\n  REST-only: {rest_only}"
+        )
+
+    def test_dnp3_bacnet_top_level_field_sets_identical(self) -> None:
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        bacnet_keys = set(_bacnet_normalized().to_dict().keys())
+        dnp3_only = dnp3_keys - bacnet_keys
+        bacnet_only = bacnet_keys - dnp3_keys
+        assert dnp3_keys == bacnet_keys, (
+            f"Field set mismatch:\n  DNP3-only: {dnp3_only}\n  BACnet-only: {bacnet_only}"
+        )
+
+    def test_dnp3_modbus_top_level_field_sets_identical(self) -> None:
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        dnp3_only = dnp3_keys - modbus_keys
+        modbus_only = modbus_keys - dnp3_keys
+        assert dnp3_keys == modbus_keys, (
+            f"Field set mismatch:\n  DNP3-only: {dnp3_only}\n  Modbus-only: {modbus_only}"
+        )
+
+    def test_dnp3_opcua_top_level_field_sets_identical(self) -> None:
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        dnp3_only = dnp3_keys - opcua_keys
+        opcua_only = opcua_keys - dnp3_keys
+        assert dnp3_keys == opcua_keys, (
+            f"Field set mismatch:\n  DNP3-only: {dnp3_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_dnp3_mqtt_top_level_field_sets_identical(self) -> None:
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        dnp3_only = dnp3_keys - mqtt_keys
+        mqtt_only = mqtt_keys - dnp3_keys
+        assert dnp3_keys == mqtt_keys, (
+            f"Field set mismatch:\n  DNP3-only: {dnp3_only}\n  MQTT-only: {mqtt_only}"
+        )
+
+    def test_all_six_evidence_field_sets_identical(self) -> None:
         rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
         bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
         modbus_ev = set(_modbus_normalized().to_dict()["protocol_evidence"].keys())
         opcua_ev = set(_opcua_normalized().to_dict()["protocol_evidence"].keys())
         mqtt_ev = set(_mqtt_normalized().to_dict()["protocol_evidence"].keys())
-        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev == mqtt_ev, (
+        dnp3_ev = set(_dnp3_normalized().to_dict()["protocol_evidence"].keys())
+        assert rest_ev == bacnet_ev == modbus_ev == opcua_ev == mqtt_ev == dnp3_ev, (
             f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, "
-            f"Modbus={modbus_ev}, OPC UA={opcua_ev}, MQTT={mqtt_ev}"
+            f"Modbus={modbus_ev}, OPC UA={opcua_ev}, MQTT={mqtt_ev}, DNP3={dnp3_ev}"
         )
 
     def test_all_protocols_have_correct_protocol_field(self) -> None:
@@ -732,12 +904,14 @@ class TestCrossProtocolFieldSetParity:
         assert _modbus_normalized().to_dict()["protocol"] == "modbus"
         assert _opcua_normalized().to_dict()["protocol"] == "opcua"
         assert _mqtt_normalized().to_dict()["protocol"] == "mqtt"
+        assert _dnp3_normalized().to_dict()["protocol"] == "dnp3"
 
     def test_all_protocols_produce_read_action_for_read_operations(self) -> None:
         assert _rest_normalized().to_dict()["action"] == "read"
         assert _bacnet_normalized().to_dict()["action"] == "read"
         assert _modbus_normalized().to_dict()["action"] == "read"
         assert _opcua_normalized().to_dict()["action"] == "read"
+        assert _dnp3_normalized().to_dict()["action"] == "read"
 
 
 # ---------------------------------------------------------------------------
@@ -789,6 +963,15 @@ class TestSerializationDeterminism:
     def test_mqtt_deterministic_across_instances(self) -> None:
         r1 = _mqtt_normalized()
         r2 = _mqtt_normalized()
+        assert r1.to_dict() == r2.to_dict()
+
+    def test_dnp3_deterministic_across_calls(self) -> None:
+        r = _dnp3_normalized()
+        assert r.to_dict() == r.to_dict()
+
+    def test_dnp3_deterministic_across_instances(self) -> None:
+        r1 = _dnp3_normalized()
+        r2 = _dnp3_normalized()
         assert r1.to_dict() == r2.to_dict()
 
 
@@ -845,6 +1028,7 @@ class TestAdapterIsolation:
             _modbus_normalized().to_dict()
             _opcua_normalized().to_dict()
             _mqtt_normalized().to_dict()
+            _dnp3_normalized().to_dict()
         finally:
             socket.getaddrinfo = original_getaddrinfo  # type: ignore[method-assign]
 
@@ -913,3 +1097,15 @@ class TestProtocolEvidencePresence:
     def test_mqtt_evidence_path_is_topic(self) -> None:
         d = _mqtt_normalized().to_dict()
         assert d["protocol_evidence"]["path"] == "building/ahu-1/setpoint"
+
+    def test_dnp3_evidence_protocol_matches_parent(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert d["protocol_evidence"]["protocol"] == d["protocol"]
+
+    def test_dnp3_evidence_method_is_operation_name(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert d["protocol_evidence"]["method"] == "READ"
+
+    def test_dnp3_evidence_path_encodes_outstation_and_point(self) -> None:
+        d = _dnp3_normalized().to_dict()
+        assert d["protocol_evidence"]["path"] == "outstation:os-14/analog_input/3"

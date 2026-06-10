@@ -1,0 +1,30 @@
+{
+  "_comment": "Example handoff payload: DNP3 adapter normalized request for a DIRECT_OPERATE intent (source operation: control relay output block, group 12 variation 1, control code 65 'latch on', sent to binary output point 7 on outstation 'os-14'). Produced by Dnp3Adapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). Control semantics normalize to 'execute'. The control model and command value stay in protocol_evidence — never in the resource ID. This is a handoff artifact — not a decision, not enforcement, not authentication, and not command transmission.",
+  "protocol": "dnp3",
+  "action": "execute",
+  "resource_type": "dnp3_point",
+  "resource_id": "dnp3:outstation:os-14/binary_output/7",
+  "protocol_evidence": {
+    "protocol": "dnp3",
+    "method": "DIRECT_OPERATE",
+    "path": "outstation:os-14/binary_output/7",
+    "metadata": {
+      "operation": "DIRECT_OPERATE",
+      "source_address": 1,
+      "destination_address": 10,
+      "outstation_id": "os-14",
+      "master_id": "master-1",
+      "object_group": 12,
+      "variation": 1,
+      "point_index": 7,
+      "point_type": "binary_output",
+      "function_code": 5,
+      "qualifier": 23,
+      "control_code": 65,
+      "control_model": "direct_operate",
+      "event_class": null,
+      "value": "LATCH_ON"
+    }
+  },
+  "subject_hint": null
+}

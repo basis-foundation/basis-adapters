@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://basis-foundation.example/schemas/dnp3-mapping.schema.json",
+  "title": "Dnp3MappingConfig",
+  "description": "Configuration schema for the DNP3 adapter mapping. Describes how DNP3 read and control intents are normalized into BASIS authorization requests. Routes match on (operation, point_type); '*' is a wildcard sentinel. Control routes (SELECT, OPERATE, DIRECT_OPERATE, CONTROL) must reference {point_index} in their resource_id_template. Command values are never template fields — they remain protocol evidence.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of route mappings. Routes are evaluated in order; the first match wins.",
+      "items": {
+        "$ref": "#/$defs/Dnp3RouteMapping"
+      }
+    }
+  },
+  "$defs": {
+    "Dnp3RouteMapping": {
+      "type": "object",
+      "description": "Maps a DNP3 operation and point type to normalized authorization semantics.",
+      "required": ["operation", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable route name. Must be unique across all routes in the config if non-empty.",
+          "default": ""
+        },
+        "operation": {
+          "type": "string",
+          "description": "DNP3 operation to match (protocol-native function name). Use '*' to match any operation.",
+          "enum": ["READ", "SELECT", "OPERATE", "DIRECT_OPERATE", "CONTROL", "ENABLE_UNSOLICITED", "*"]
+        },
+        "point_type": {
+          "type": "string",
+          "description": "DNP3 point type to match, or '*' to match any (including an absent point type).",
+          "enum": ["binary_input", "binary_output", "analog_input", "analog_output", "counter", "frozen_counter", "*"],
+          "default": "*"
+        },
+        "action": {
+          "type": "string",
+          "description": "Normalized action verb. If empty, the default operation→action map is used (READ→read, SELECT/OPERATE/DIRECT_OPERATE/CONTROL→execute, ENABLE_UNSOLICITED→subscribe).",
+          "enum": ["read", "write", "control", "discover", "subscribe", "execute", ""],
+          "default": ""
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Normalized resource category, e.g. 'dnp3_point'.",
+          "minLength": 1,
+          "examples": ["dnp3_point", "dnp3_object_group", "dnp3_event_class"]
+        },
+        "resource_id_template": {
+          "type": "string",
+          "description": "Template for the resource ID. May reference {operation}, {outstation_id}, {master_id}, {source_address}, {destination_address}, {object_group}, {variation}, {point_index}, {point_type}, {event_class} using {param} syntax. Control routes must reference {point_index}. Command values are not available as template fields.",
+          "minLength": 1,
+          "examples": [
+            "dnp3:outstation:{outstation_id}/analog_input/{point_index}",
+            "dnp3:outstation:{outstation_id}/group/{object_group}/variation/{variation}",
+            "dnp3:outstation:{outstation_id}/binary_output/{point_index}"
+          ]
+        }
+      }
+    }
+  }
+}

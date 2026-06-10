@@ -1,0 +1,62 @@
+{
+  "_comment": "Intentionally invalid DNP3 mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by Dnp3MappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized DNP3 operation 'WRITE_FREEZE' — only READ, SELECT, OPERATE, DIRECT_OPERATE, CONTROL, ENABLE_UNSOLICITED, and '*' are accepted",
+      "name": "bad-operation",
+      "operation": "WRITE_FREEZE",
+      "point_type": "counter",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/counter/{point_index}"
+    },
+    {
+      "_error": "INVALID: unrecognized point type 'thermocouple'",
+      "name": "bad-point-type",
+      "operation": "READ",
+      "point_type": "thermocouple",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/analog_input/{point_index}"
+    },
+    {
+      "_error": "INVALID: action 'actuate' is not a recognized action verb",
+      "name": "invalid-action",
+      "operation": "DIRECT_OPERATE",
+      "point_type": "binary_output",
+      "action": "actuate",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/binary_output/{point_index}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "operation": "READ",
+      "point_type": "analog_input",
+      "resource_type": "",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/analog_input/{point_index}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {value} — command values are evidence, never resource identity",
+      "name": "value-in-template",
+      "operation": "DIRECT_OPERATE",
+      "point_type": "analog_output",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}/analog_output/{point_index}/{value}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{outstation_id' — missing closing brace",
+      "name": "malformed-template",
+      "operation": "READ",
+      "point_type": "binary_input",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id"
+    },
+    {
+      "_error": "INVALID: control route does not reference {point_index} — control commands must identify the controlled point",
+      "name": "control-without-point-index",
+      "operation": "OPERATE",
+      "point_type": "binary_output",
+      "resource_type": "dnp3_point",
+      "resource_id_template": "dnp3:outstation:{outstation_id}"
+    }
+  ]
+}
