@@ -2,14 +2,14 @@
 
 ## Status
 
-Stable — Phase 12
+Stable — Phase 13
 
 ## Overview
 
 Every adapter in `basis-adapters` produces a single output type:
 `NormalizedAuthorizationRequest`. This document defines the canonical shape of
-that output, how REST, BACnet, Modbus, OPC UA, MQTT, DNP3, and IEC 61850 all
-map into it, and how an enforcement boundary should consume it.
+that output, how REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX
+all map into it, and how an enforcement boundary should consume it.
 
 ---
 
@@ -32,7 +32,7 @@ participate in that decision.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`, `"dnp3"`, `"iec61850"`) |
+| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`, `"dnp3"`, `"iec61850"`, `"knx"`) |
 | `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`, `"execute"`, `"browse"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
 | `resource_id` | string | yes | Stable identifier for the target resource |
@@ -120,7 +120,17 @@ deterministic IED-rooted address (e.g. `ied:ied-sub1/ld:CTRL/ln:CSWI1/do:Pos`).
 is never treated as verified identity — and values, quality, timestamps, and
 cause stay in evidence, never in resource IDs.
 
-All seven structures are nested under `protocol_evidence` so enforcement boundaries
+**KNX:** `method` is the KNX operation name (e.g. `GROUP_VALUE_READ`,
+`GROUP_VALUE_WRITE`, `OBSERVE`). `path` is a deterministic group-rooted
+address (e.g. `group:1/2/3/object:4`). `metadata` carries `operation`,
+`group_address`, `individual_address`, `device_address`,
+`communication_object`, `datapoint_type`, `payload_type`, `value`,
+`priority`, `area`, `line`, and `device`. Note that `individual_address` is
+evidence only — it is never treated as verified identity — and values,
+payloads, priority, and datapoint types stay in evidence, never in resource
+IDs.
+
+All eight structures are nested under `protocol_evidence` so enforcement boundaries
 and audit systems can always find protocol-specific detail without it polluting
 the canonical fields.
 
@@ -275,7 +285,35 @@ produces `resource_id = "iec61850:ied:ied-sub1/ld:CTRL/ln:CSWI1/do:Pos"` and
 adapter keeps no select/operate state; the control model (ctlModel) is
 preserved in evidence.
 
-All seven protocols produce the same field set. The canonical shape is
+## How KNX Maps into the Canonical Shape
+
+```
+KNX operation    → action (via route action or default operation→action map:
+                   GROUP_VALUE_READ→read, GROUP_VALUE_WRITE→write,
+                   GROUP_VALUE_RESPONSE→read, OBSERVE→subscribe)
+route.resource_type → resource_type
+resource_id_template rendered with KNX fields → resource_id
+"knx"            → protocol
+KnxOperation.to_protocol_operation() → protocol_evidence
+metadata["subject_hint"] → subject_hint
+```
+
+Template fields for KNX: `{operation}`, `{group_address}`,
+`{individual_address}`, `{device_address}`, `{communication_object}`,
+`{area}`, `{line}`, `{device}`. Optional fields are only substitutable when
+present on the operation. Values, payloads, payload types, priority, and
+datapoint types are never template fields — they remain protocol evidence.
+
+Example: a `GROUP_VALUE_READ` of group address `1/2/3` with template
+`knx:group:{group_address}` produces `resource_id = "knx:group:1/2/3"`; a
+`GROUP_VALUE_WRITE` of value `true` to the same address with the same
+template produces the same `resource_id` and `action = "write"` — the written
+value stays in evidence, never in the resource ID. Group addresses are
+matched and preserved verbatim — no topology expansion, no semantic
+inference. An `OBSERVE` of group address `2/0/14` produces
+`action = "subscribe"` with no implication of live bus monitoring.
+
+All eight protocols produce the same field set. The canonical shape is
 identical; only `protocol` and `protocol_evidence` internals differ.
 
 ---
@@ -369,4 +407,4 @@ Example handoff payloads are in `examples/handoff/`.
 - **`schemas/normalized-authorization-request.schema.json`** — machine-readable
   JSON Schema for the serialized form.
 - **`examples/handoff/`** — concrete example payloads for REST, BACnet,
-  Modbus, OPC UA, MQTT, DNP3, and IEC 61850.
+  Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX.

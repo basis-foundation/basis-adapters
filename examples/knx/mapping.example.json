@@ -1,0 +1,53 @@
+{
+  "_comment": "Example KNX adapter mapping configuration. Routes are evaluated in order; the first match wins. Use '*' as a wildcard for operation or group_address. Group addresses are matched verbatim — no topology expansion, no semantic inference. Values, payloads, payload types, priority, and datapoint types are never template fields — they remain protocol evidence.",
+  "routes": [
+    {
+      "name": "read-lighting-scene-status",
+      "operation": "GROUP_VALUE_READ",
+      "group_address": "1/2/3",
+      "action": "read",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}"
+    },
+    {
+      "name": "write-lighting-scene",
+      "operation": "GROUP_VALUE_WRITE",
+      "group_address": "1/2/3",
+      "action": "write",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}"
+    },
+    {
+      "name": "read-any-group",
+      "operation": "GROUP_VALUE_READ",
+      "group_address": "*",
+      "action": "read",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}"
+    },
+    {
+      "name": "response-any-group",
+      "operation": "GROUP_VALUE_RESPONSE",
+      "group_address": "*",
+      "action": "",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}"
+    },
+    {
+      "name": "write-any-group-with-object",
+      "operation": "GROUP_VALUE_WRITE",
+      "group_address": "*",
+      "action": "write",
+      "resource_type": "knx_communication_object",
+      "resource_id_template": "knx:group:{group_address}/object:{communication_object}"
+    },
+    {
+      "name": "observe-any-group",
+      "operation": "OBSERVE",
+      "group_address": "*",
+      "action": "subscribe",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}"
+    }
+  ]
+}

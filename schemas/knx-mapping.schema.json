@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://basis-foundation.example/schemas/knx-mapping.schema.json",
+  "title": "KnxMappingConfig",
+  "description": "Configuration schema for the KNX adapter mapping. Describes how KNX group value read, group value write, group value response, and observe/monitor intents are normalized into BASIS authorization requests. Routes match on (operation, group_address); '*' is a wildcard sentinel and group addresses are matched verbatim with no topology expansion. Values, payloads, payload types, priority, and datapoint types are never template fields — they remain protocol evidence.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of route mappings. Routes are evaluated in order; the first match wins.",
+      "items": {
+        "$ref": "#/$defs/KnxRouteMapping"
+      }
+    }
+  },
+  "$defs": {
+    "KnxRouteMapping": {
+      "type": "object",
+      "description": "Maps a KNX operation and group address to normalized authorization semantics.",
+      "required": ["operation", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable route name. Must be unique across all routes in the config if non-empty.",
+          "default": ""
+        },
+        "operation": {
+          "type": "string",
+          "description": "KNX operation to match (protocol-intent name). Use '*' to match any operation.",
+          "enum": ["GROUP_VALUE_READ", "GROUP_VALUE_WRITE", "GROUP_VALUE_RESPONSE", "OBSERVE", "*"]
+        },
+        "group_address": {
+          "type": "string",
+          "description": "Group address to match verbatim (e.g. '1/2/3'), or '*' to match any. Exact string comparison only — no topology expansion, no range matching, no semantic inference.",
+          "minLength": 1,
+          "default": "*"
+        },
+        "action": {
+          "type": "string",
+          "description": "Normalized action verb. If empty, the default operation→action map is used (GROUP_VALUE_READ→read, GROUP_VALUE_WRITE→write, GROUP_VALUE_RESPONSE→read, OBSERVE→subscribe).",
+          "enum": ["read", "write", "control", "discover", "subscribe", ""],
+          "default": ""
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Normalized resource category, e.g. 'knx_group_address'.",
+          "minLength": 1,
+          "examples": ["knx_group_address", "knx_communication_object", "knx_device_object"]
+        },
+        "resource_id_template": {
+          "type": "string",
+          "description": "Template for the resource ID. May reference {operation}, {group_address}, {individual_address}, {device_address}, {communication_object}, {area}, {line}, {device} using {param} syntax. Values, payloads, payload types, priority, and datapoint types are not available as template fields.",
+          "minLength": 1,
+          "examples": [
+            "knx:group:{group_address}",
+            "knx:group:{group_address}/object:{communication_object}",
+            "knx:device:{device_address}/object:{communication_object}"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -19,7 +19,8 @@ Adapters do not answer whether the request should be allowed.
   identifiers and property references, Modbus function codes and register addresses,
   OPC UA node identifiers and service requests, MQTT topics and publish/subscribe
   operations, DNP3 object groups, point indexes, and control operations, IEC 61850
-  IED/logical device/logical node/data object addressing and control models.
+  IED/logical device/logical node/data object addressing and control models, KNX
+  group addresses, datapoint types, and group value operations.
 - Normalization: mapping protocol operations to a stable, protocol-agnostic
   authorization request shape (`NormalizedAuthorizationRequest`).
 - Mapping configuration: rules that describe which protocol operations correspond to
@@ -105,10 +106,10 @@ security bypass. Adapters must not receive, inspect, or act on authorization dec
 
 ## Current Protocol Support
 
-Seven adapters are implemented and normalization-complete: REST, BACnet, Modbus,
-OPC UA, MQTT, DNP3, and IEC 61850. All seven emit the canonical Normalized
+Eight adapters are implemented and normalization-complete: REST, BACnet, Modbus,
+OPC UA, MQTT, DNP3, IEC 61850, and KNX. All eight emit the canonical Normalized
 Authorization Request shape and participate in the cross-protocol contract
-tests. Planned protocols (KNX, Niagara) are tracked in the README roadmap.
+tests. Planned protocols (Niagara) are tracked in the README roadmap.
 
 ### REST
 
@@ -173,6 +174,18 @@ commands, not data writes); `ENABLE_REPORTING`, `ENABLE_GOOSE`, and
 normalized statelessly — every step is authorization-relevant, and the
 control model (ctlModel) is preserved as evidence. See
 [iec61850-adapter.md](iec61850-adapter.md).
+
+### KNX
+
+KNX is the dominant open building automation standard in Europe: lighting,
+HVAC, shading, and scenes ride on group communication, where shared group
+addresses bind communication objects on many devices to one logical function
+and datapoint types (DPTs) define value interpretation. `GROUP_VALUE_READ`
+normalizes to `read`, `GROUP_VALUE_WRITE` to `write`, `GROUP_VALUE_RESPONSE`
+(data flowing back to a reader) to `read`, and `OBSERVE` (explicit monitoring
+intent) to `subscribe`. Group addresses are matched and preserved verbatim —
+no topology expansion, no semantic inference — and DPTs, values, and priority
+are preserved as evidence. See [knx-adapter.md](knx-adapter.md).
 
 ---
 

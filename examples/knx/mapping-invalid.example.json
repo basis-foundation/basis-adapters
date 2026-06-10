@@ -1,0 +1,62 @@
+{
+  "_comment": "Intentionally invalid KNX mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by KnxMappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized KNX operation 'DEVICE_DESCRIPTOR_READ' — only GROUP_VALUE_READ, GROUP_VALUE_WRITE, GROUP_VALUE_RESPONSE, OBSERVE, and '*' are accepted",
+      "name": "bad-operation",
+      "operation": "DEVICE_DESCRIPTOR_READ",
+      "group_address": "*",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}"
+    },
+    {
+      "_error": "INVALID: action 'actuate' is not a recognized action verb",
+      "name": "invalid-action",
+      "operation": "GROUP_VALUE_WRITE",
+      "group_address": "1/2/3",
+      "action": "actuate",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "operation": "GROUP_VALUE_READ",
+      "group_address": "*",
+      "resource_type": "",
+      "resource_id_template": "knx:group:{group_address}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {value} — values are evidence, never resource identity",
+      "name": "value-in-template",
+      "operation": "GROUP_VALUE_WRITE",
+      "group_address": "*",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}/{value}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {priority} — frame priority is evidence, never resource identity",
+      "name": "priority-in-template",
+      "operation": "GROUP_VALUE_WRITE",
+      "group_address": "*",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}/{priority}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {datapoint_type} and {payload_type} — datapoint and payload typing are evidence, never resource identity",
+      "name": "dpt-in-template",
+      "operation": "GROUP_VALUE_READ",
+      "group_address": "*",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address}/{datapoint_type}/{payload_type}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{group_address' — missing closing brace",
+      "name": "malformed-template",
+      "operation": "GROUP_VALUE_READ",
+      "group_address": "*",
+      "resource_type": "knx_group_address",
+      "resource_id_template": "knx:group:{group_address"
+    }
+  ]
+}
