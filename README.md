@@ -41,26 +41,53 @@ Adapters never see the decision. They do not allow or deny anything.
 
 | Protocol | Adapter | Status |
 |---|---|---|
-| REST | `basis_adapters.rest` | Skeleton + contract hardening |
-| BACnet | `basis_adapters.bacnet` | Skeleton |
-| Modbus | `basis_adapters.modbus` | Skeleton |
-| OPC UA | `basis_adapters.opcua` | Skeleton |
+| REST | `basis_adapters.rest` | Normalization-complete |
+| BACnet | `basis_adapters.bacnet` | Normalization-complete |
+| Modbus | `basis_adapters.modbus` | Normalization-complete |
+| OPC UA | `basis_adapters.opcua` | Normalization-complete |
+
+**Normalization-complete** means the adapter's normalization model and
+architecture are implemented, contract-tested, and stable: it accepts typed
+protocol operations and emits the canonical normalized request shape. It does
+**not** mean a full wire-protocol implementation — there is no BACnet/IP stack,
+no Modbus TCP parser, no OPC UA secure channel, no live networking of any kind.
+Adapters model protocol intent, not wire format.
 
 All four adapters emit the same canonical normalized request shape, defined in
 [`schemas/normalized-authorization-request.schema.json`](schemas/normalized-authorization-request.schema.json)
 and proven by cross-protocol contract tests.
 
-### Phase 7: OPC UA
+### The Normalization Contract
 
-Phase 7 added OPC UA as the fourth protocol family. The OPC UA adapter
-normalizes `Read`, `Write`, `Call`, `Subscribe`, and `Browse` service intent
-into the canonical handoff shape, introducing the additive action verbs
-`execute` (method invocation) and `browse` (address-space traversal). Like the
-other adapters, it is pure normalization: no live OPC UA networking, no
-endpoint discovery, no certificates, no secure channels, no sessions. Session
-and endpoint context is preserved as audit evidence only. See
-[docs/architecture/opcua-adapter.md](docs/architecture/opcua-adapter.md) and
-[docs/implementation/phase-7-opcua-adapter.md](docs/implementation/phase-7-opcua-adapter.md).
+Protocols do not converge. Outputs converge.
+
+REST stays resource-oriented, BACnet stays object-oriented, Modbus stays
+register-oriented, OPC UA keeps its typed address space — adapters do not paper
+over those differences on the input side. What converges is the output: every
+adapter emits the same Normalized Authorization Request, and that normalized
+request is the architectural invariant the rest of BASIS builds on. See
+[docs/contracts/normalization-contract.md](docs/contracts/normalization-contract.md).
+
+## Roadmap
+
+Completed adapters (normalization-complete):
+
+- REST
+- BACnet
+- Modbus
+- OPC UA
+
+Planned adapters:
+
+- MQTT
+- DNP3
+- IEC 61850
+- KNX
+- Niagara
+
+The roadmap is deliberately focused: new protocols are added one at a time,
+and each must conform to the canonical normalized request shape (see
+[CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## What Adapters Do
 
@@ -76,11 +103,18 @@ and endpoint context is preserved as audit evidence only. See
 
 ## What Adapters Do Not Do
 
-- No authentication, identity resolution, or JWT validation (basis-gateway's job)
-- No policy evaluation or decisions (basis-core's job)
-- No enforcement, and no reinterpretation of decisions
-- No live protocol communication — no sockets, no packet parsing, no protocol stacks
-- No proxy server — adapters are libraries, not daemons
+Adapters are normalization libraries. They are not:
+
+- **Protocol gateways or proxy servers** — no sockets, no packet parsing, no
+  protocol stacks, no live protocol communication. Adapters are libraries, not
+  daemons.
+- **Policy engines** — no policy evaluation or decisions (basis-core's job)
+- **Identity providers** — no authentication, identity resolution, or JWT
+  validation (basis-gateway's job)
+- **Runtime enforcement systems** — no enforcement, and no reinterpretation of
+  decisions
+- **Device controllers** — adapters never command, actuate, or communicate with
+  devices
 
 ---
 
