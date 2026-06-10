@@ -74,6 +74,10 @@ ruff format --check .
 mypy src
 ```
 
+GitHub Actions runs these same four gates on every pull request and on pushes
+to `main` (`.github/workflows/ci.yml`), so a PR that passes locally should pass
+CI. Note that the type-checking gate is `mypy src`, not `mypy .`.
+
 See `docs/development-workflow.md` for the recommended day-to-day workflow.
 
 ## Branch Naming

@@ -171,6 +171,10 @@ ruff format --check .     # formatting
 mypy src                  # strict type checking
 ```
 
+The same four gates run automatically in GitHub Actions
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) on every pull request
+and on pushes to `main`. CI type-checks `src` only — the configured gate.
+
 ---
 
 ## Documentation
