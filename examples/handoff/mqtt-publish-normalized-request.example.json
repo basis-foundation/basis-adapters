@@ -1,0 +1,22 @@
+{
+  "_comment": "Example handoff payload: MQTT adapter normalized request for a PUBLISH intent (source operation: PUBLISH to topic 'building/ahu-1/setpoint', qos 1, json payload). Produced by MqttAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). This is a handoff artifact — not a decision, not enforcement, not authentication. The client_id is evidence only, never verified identity.",
+  "protocol": "mqtt",
+  "action": "write",
+  "resource_type": "mqtt_topic",
+  "resource_id": "mqtt:building/ahu-1/setpoint",
+  "protocol_evidence": {
+    "protocol": "mqtt",
+    "method": "PUBLISH",
+    "path": "building/ahu-1/setpoint",
+    "metadata": {
+      "operation": "PUBLISH",
+      "topic": "building/ahu-1/setpoint",
+      "client_id": "bms-controller-7",
+      "qos": 1,
+      "retain": false,
+      "payload_type": "json",
+      "protocol_version": "5.0"
+    }
+  },
+  "subject_hint": null
+}

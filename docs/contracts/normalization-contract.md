@@ -2,14 +2,14 @@
 
 ## Status
 
-Stable — Phase 7
+Stable — Phase 10
 
 ## Overview
 
 Every adapter in `basis-adapters` produces a single output type:
 `NormalizedAuthorizationRequest`. This document defines the canonical shape of
-that output, how REST, BACnet, Modbus, and OPC UA all map into it, and how an
-enforcement boundary should consume it.
+that output, how REST, BACnet, Modbus, OPC UA, and MQTT all map into it, and
+how an enforcement boundary should consume it.
 
 ---
 
@@ -32,7 +32,7 @@ participate in that decision.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`) |
+| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`) |
 | `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`, `"execute"`, `"browse"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
 | `resource_id` | string | yes | Stable identifier for the target resource |
@@ -92,7 +92,14 @@ is the target node identifier (e.g. `ns=2;s=Building.AHU1.SupplyTemp`).
 `endpoint_url`, and `session_id`. Note that `session_id` and `endpoint_url`
 are evidence only — they are never treated as verified identity.
 
-All four structures are nested under `protocol_evidence` so enforcement boundaries
+**MQTT:** `method` is the MQTT operation name (`PUBLISH` or `SUBSCRIBE`).
+`path` is the topic (or topic filter), preserved verbatim — including any
+`+`/`#` wildcard characters, which are never expanded. `metadata` carries
+`operation`, `topic`, `client_id`, `qos`, `retain`, `payload_type`, and
+`protocol_version`. Note that `client_id` is evidence only — it is never
+treated as verified identity.
+
+All five structures are nested under `protocol_evidence` so enforcement boundaries
 and audit systems can always find protocol-specific detail without it polluting
 the canonical fields.
 
@@ -158,7 +165,30 @@ template `{node_id}:{attribute_id}` produces
 `{node_id}:method:{method_id}` produces
 `resource_id = "ns=2;s=Building.AHU1:method:ns=2;s=Building.AHU1.Reset"`.
 
-All four protocols produce the same field set. The canonical shape is
+## How MQTT Maps into the Canonical Shape
+
+```
+MQTT operation   → action (via route action or default operation→action map:
+                   PUBLISH→write, SUBSCRIBE→subscribe)
+route.resource_type → resource_type
+resource_id_template rendered with MQTT fields → resource_id
+"mqtt"           → protocol
+MqttOperation.to_protocol_operation() → protocol_evidence
+metadata["subject_hint"] → subject_hint
+```
+
+Template fields for MQTT: `{operation}`, `{topic}`, `{client_id}`, `{qos}`,
+`{payload_type}`. Optional fields are only substitutable when present on the
+operation.
+
+Example: a `PUBLISH` to `building/ahu-1/setpoint` with template
+`mqtt:{topic}` produces `resource_id = "mqtt:building/ahu-1/setpoint"`; a
+`SUBSCRIBE` to the topic filter `building/+/telemetry` with the same template
+produces `resource_id = "mqtt:building/+/telemetry"` — the `+` wildcard is
+preserved verbatim, never expanded. Wildcard authorization policy belongs to
+policy evaluation, not the adapter.
+
+All five protocols produce the same field set. The canonical shape is
 identical; only `protocol` and `protocol_evidence` internals differ.
 
 ---
@@ -252,4 +282,4 @@ Example handoff payloads are in `examples/handoff/`.
 - **`schemas/normalized-authorization-request.schema.json`** — machine-readable
   JSON Schema for the serialized form.
 - **`examples/handoff/`** — concrete example payloads for REST, BACnet,
-  Modbus, and OPC UA.
+  Modbus, OPC UA, and MQTT.

@@ -11,10 +11,12 @@ Validated pairs:
 3. BACnet mapping example against bacnet-mapping.schema.json.
 4. Modbus mapping example against modbus-mapping.schema.json.
 5. OPC UA mapping example against opcua-mapping.schema.json.
-6. All handoff examples against normalized-authorization-request.schema.json.
-7. Live adapter output (REST, BACnet, Modbus, OPC UA) against the normalized
-   request schema — schemas must match the implementation, not just the
-   example files.
+6. MQTT mapping example against mqtt-mapping.schema.json, and the
+   deliberately invalid MQTT mapping example FAILS validation.
+7. All handoff examples against normalized-authorization-request.schema.json.
+8. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT) against the
+   normalized request schema — schemas must match the implementation, not
+   just the example files.
 
 Convention: keys beginning with "_" (e.g. "_comment", "_error") are
 documentation annotations, not part of any contract. The adapters' from_dict()
@@ -37,6 +39,7 @@ from jsonschema.exceptions import ValidationError
 from basis_adapters.bacnet import BacnetAdapter, BacnetMappingConfig, BacnetOperation
 from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
 from basis_adapters.models import AdapterContext, ProtocolOperation
+from basis_adapters.mqtt import MqttAdapter, MqttMappingConfig, MqttOperation
 from basis_adapters.opcua import OpcuaAdapter, OpcuaMappingConfig, OpcuaOperation
 from basis_adapters.rest import RestAdapter, RestMappingConfig
 
@@ -48,6 +51,7 @@ REST_MAPPING_SCHEMA = SCHEMAS / "rest-mapping.schema.json"
 BACNET_MAPPING_SCHEMA = SCHEMAS / "bacnet-mapping.schema.json"
 MODBUS_MAPPING_SCHEMA = SCHEMAS / "modbus-mapping.schema.json"
 OPCUA_MAPPING_SCHEMA = SCHEMAS / "opcua-mapping.schema.json"
+MQTT_MAPPING_SCHEMA = SCHEMAS / "mqtt-mapping.schema.json"
 NORMALIZED_REQUEST_SCHEMA = SCHEMAS / "normalized-authorization-request.schema.json"
 
 
@@ -104,6 +108,14 @@ class TestMappingExamplesMatchSchemas:
     def test_opcua_mapping_example_matches_schema(self) -> None:
         validate_example(OPCUA_MAPPING_SCHEMA, EXAMPLES / "opcua" / "mapping.example.json")
 
+    def test_mqtt_mapping_example_matches_schema(self) -> None:
+        validate_example(MQTT_MAPPING_SCHEMA, EXAMPLES / "mqtt" / "mapping.example.json")
+
+    def test_mqtt_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(load_json(EXAMPLES / "mqtt" / "mapping-invalid.example.json"))
+        with pytest.raises(ValidationError):
+            validator_for(MQTT_MAPPING_SCHEMA).validate(instance)
+
 
 class TestHandoffExamplesMatchNormalizedRequestSchema:
     @pytest.mark.parametrize(
@@ -113,6 +125,8 @@ class TestHandoffExamplesMatchNormalizedRequestSchema:
             "bacnet-normalized-request.example.json",
             "modbus-normalized-request.example.json",
             "opcua-normalized-request.example.json",
+            "mqtt-publish-normalized-request.example.json",
+            "mqtt-subscribe-normalized-request.example.json",
         ],
     )
     def test_handoff_example_matches_schema(self, example_name: str) -> None:
@@ -198,6 +212,41 @@ class TestLiveAdapterOutputMatchesNormalizedRequestSchema:
         assert d["action"] == "execute"
         validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
 
+    def test_mqtt_publish_output_matches_schema(self) -> None:
+        config = MqttMappingConfig.from_dict(load_json(EXAMPLES / "mqtt" / "mapping.example.json"))
+        adapter = MqttAdapter(mapping=config, context=AdapterContext(adapter_id="mqtt-schema"))
+        op = MqttOperation(
+            operation="PUBLISH",
+            topic="building/ahu-1/setpoint",
+            client_id="bms-controller-7",
+            qos=1,
+            payload_type="json",
+            protocol_version="5.0",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "write"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_mqtt_subscribe_output_matches_schema(self) -> None:
+        config = MqttMappingConfig.from_dict(load_json(EXAMPLES / "mqtt" / "mapping.example.json"))
+        adapter = MqttAdapter(mapping=config, context=AdapterContext(adapter_id="mqtt-schema"))
+        op = MqttOperation(
+            operation="SUBSCRIBE",
+            topic="building/+/telemetry",
+            client_id="energy-dashboard-2",
+            qos=0,
+            protocol_version="3.1.1",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "subscribe"
+        # The MQTT wildcard is preserved verbatim, never expanded.
+        assert d["resource_id"] == "mqtt:building/+/telemetry"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
 
 class TestSchemasAreThemselvesValid:
     @pytest.mark.parametrize(
@@ -207,6 +256,7 @@ class TestSchemasAreThemselvesValid:
             BACNET_MAPPING_SCHEMA,
             MODBUS_MAPPING_SCHEMA,
             OPCUA_MAPPING_SCHEMA,
+            MQTT_MAPPING_SCHEMA,
             NORMALIZED_REQUEST_SCHEMA,
         ],
         ids=lambda p: p.name,

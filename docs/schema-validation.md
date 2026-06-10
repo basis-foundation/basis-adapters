@@ -16,15 +16,19 @@ automated tests, so examples and schemas cannot silently drift apart.
 | `examples/bacnet/mapping.example.json` | `schemas/bacnet-mapping.schema.json` |
 | `examples/modbus/mapping.example.json` | `schemas/modbus-mapping.schema.json` |
 | `examples/opcua/mapping.example.json` | `schemas/opcua-mapping.schema.json` |
+| `examples/mqtt/mapping.example.json` | `schemas/mqtt-mapping.schema.json` |
+| `examples/mqtt/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/handoff/rest-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/bacnet-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/modbus-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/opcua-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/mqtt-publish-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/mqtt-subscribe-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 
 In addition, the tests verify that **live adapter output matches the schema**: each
-adapter (REST, BACnet, Modbus, OPC UA) is loaded with its example mapping, normalizes
-a representative operation, and the resulting `to_dict()` output is validated against
-the normalized request schema. This keeps the schemas honest against the
+adapter (REST, BACnet, Modbus, OPC UA, MQTT) is loaded with its example mapping,
+normalizes a representative operation, and the resulting `to_dict()` output is
+validated against the normalized request schema. This keeps the schemas honest against the
 implementation, not just against static example files.
 
 The schemas themselves are also checked against the Draft 2020-12 meta-schema.
