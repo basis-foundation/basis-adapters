@@ -1,0 +1,29 @@
+{
+  "_comment": "Example handoff payload: OPC UA adapter normalized request. Produced by OpcuaAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). This is a handoff artifact — not a decision, not enforcement, not authentication.",
+  "protocol": "opcua",
+  "action": "read",
+  "resource_type": "opcua_node",
+  "resource_id": "ns=2;s=Building.AHU1.SupplyTemp:Value",
+  "protocol_evidence": {
+    "protocol": "opcua",
+    "method": "Read",
+    "path": "ns=2;s=Building.AHU1.SupplyTemp",
+    "metadata": {
+      "service": "Read",
+      "node_id": "ns=2;s=Building.AHU1.SupplyTemp",
+      "attribute_id": "Value",
+      "method_id": null,
+      "namespace_index": 2,
+      "identifier": "Building.AHU1.SupplyTemp",
+      "identifier_type": "string",
+      "browse_name": null,
+      "parent_node_id": null,
+      "subscription_id": null,
+      "monitored_item_id": null,
+      "value_present": false,
+      "endpoint_url": null,
+      "session_id": null
+    }
+  },
+  "subject_hint": null
+}

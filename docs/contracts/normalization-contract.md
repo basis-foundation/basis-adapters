@@ -2,13 +2,13 @@
 
 ## Status
 
-Stable — Phase 5
+Stable — Phase 7
 
 ## Overview
 
 Every adapter in `basis-adapters` produces a single output type:
 `NormalizedAuthorizationRequest`. This document defines the canonical shape of
-that output, how REST, BACnet, and Modbus all map into it, and how an
+that output, how REST, BACnet, Modbus, and OPC UA all map into it, and how an
 enforcement boundary should consume it.
 
 ---
@@ -32,9 +32,13 @@ participate in that decision.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`) |
-| `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`) |
+| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`) |
+| `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`, `"execute"`, `"browse"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
+
+> `execute` (method invocation) and `browse` (address-space traversal) were
+> added additively in Phase 7 for OPC UA. Existing protocol mappings and
+> downstream consumers are unaffected; the enum only grew.
 | `resource_id` | string | yes | Stable identifier for the target resource |
 | `protocol_evidence` | object | yes | The original protocol operation, preserved verbatim for audit |
 | `subject_hint` | string or null | no | Unverified identity hint forwarded from the protocol layer |
@@ -80,7 +84,15 @@ encodes object identity as `{object_type}:{object_instance}:{property_identifier
 carries `function`, `unit_id`, `address`, `quantity`, `value_present`,
 `register_type`, `source_address`, and `transaction_id`.
 
-All three structures are nested under `protocol_evidence` so enforcement boundaries
+**OPC UA:** `method` is the OPC UA service name (e.g. `Read`, `Call`). `path`
+is the target node identifier (e.g. `ns=2;s=Building.AHU1.SupplyTemp`).
+`metadata` carries `service`, `node_id`, `attribute_id`, `method_id`,
+`namespace_index`, `identifier`, `identifier_type`, `browse_name`,
+`parent_node_id`, `subscription_id`, `monitored_item_id`, `value_present`,
+`endpoint_url`, and `session_id`. Note that `session_id` and `endpoint_url`
+are evidence only — they are never treated as verified identity.
+
+All four structures are nested under `protocol_evidence` so enforcement boundaries
 and audit systems can always find protocol-specific detail without it polluting
 the canonical fields.
 
@@ -122,7 +134,31 @@ metadata["subject_hint"] → subject_hint
 Template fields for Modbus: `{function}`, `{unit_id}`, `{address}`,
 `{quantity}`, `{register_type}`.
 
-All three protocols produce the same field set. The canonical shape is
+## How OPC UA Maps into the Canonical Shape
+
+```
+OPC UA service   → action (via route action or default service→action map:
+                   Read→read, Write→write, Call→execute,
+                   Subscribe→subscribe, Browse→browse)
+route.resource_type → resource_type
+resource_id_template rendered with OPC UA fields → resource_id
+"opcua"          → protocol
+OpcuaOperation.to_protocol_operation() → protocol_evidence
+metadata["subject_hint"] → subject_hint
+```
+
+Template fields for OPC UA: `{service}`, `{node_id}`, `{attribute_id}`,
+`{method_id}`, `{namespace_index}`, `{browse_name}`, `{parent_node_id}`.
+Optional fields are only substitutable when present on the operation.
+
+Example: a `Read` of `ns=2;s=Building.AHU1.SupplyTemp` attribute `Value` with
+template `{node_id}:{attribute_id}` produces
+`resource_id = "ns=2;s=Building.AHU1.SupplyTemp:Value"`; a `Call` of method
+`ns=2;s=Building.AHU1.Reset` on node `ns=2;s=Building.AHU1` with template
+`{node_id}:method:{method_id}` produces
+`resource_id = "ns=2;s=Building.AHU1:method:ns=2;s=Building.AHU1.Reset"`.
+
+All four protocols produce the same field set. The canonical shape is
 identical; only `protocol` and `protocol_evidence` internals differ.
 
 ---
@@ -215,4 +251,5 @@ Example handoff payloads are in `examples/handoff/`.
   document extends it with the cross-protocol output shape.
 - **`schemas/normalized-authorization-request.schema.json`** — machine-readable
   JSON Schema for the serialized form.
-- **`examples/handoff/`** — concrete example payloads for REST and BACnet.
+- **`examples/handoff/`** — concrete example payloads for REST, BACnet,
+  Modbus, and OPC UA.

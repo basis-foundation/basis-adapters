@@ -14,8 +14,8 @@
     },
     "action": {
       "type": "string",
-      "description": "Normalized action verb describing what the caller is attempting to do.",
-      "enum": ["read", "write", "control", "discover", "subscribe"]
+      "description": "Normalized action verb describing what the caller is attempting to do. 'execute' and 'browse' were added (additively) in Phase 7 for OPC UA method invocation and address-space traversal.",
+      "enum": ["read", "write", "control", "discover", "subscribe", "execute", "browse"]
     },
     "resource_type": {
       "type": "string",

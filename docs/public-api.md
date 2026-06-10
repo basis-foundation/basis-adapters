@@ -61,6 +61,19 @@ detail and may change without notice.
 | `VALID_MODBUS_FUNCTIONS` | Allowed Modbus function names. |
 | `VALID_MODBUS_TEMPLATE_FIELDS` | Allowed fields in Modbus resource-ID templates. |
 
+## OPC UA (`basis_adapters.opcua`)
+
+| Name | Purpose |
+|---|---|
+| `OpcuaAdapter` | Normalizes OPC UA service requests into a `NormalizedAuthorizationRequest`. |
+| `OpcuaMappingConfig` | Validated OPC UA mapping configuration; `from_dict()` constructor. Schema: `schemas/opcua-mapping.schema.json`. |
+| `OpcuaOperation` | Typed OPC UA operation (service, node ID, attribute, method, namespace, session/endpoint evidence). |
+| `OpcuaRouteMapping` | A single OPC UA route mapping entry. |
+| `VALID_OPCUA_ACTIONS` | Normalized action verbs accepted for OPC UA routes (shared set plus `execute`, `browse`). |
+| `VALID_OPCUA_IDENTIFIER_TYPES` | Allowed OPC UA node identifier types (`numeric`, `string`, `guid`, `opaque`). |
+| `VALID_OPCUA_SERVICES` | Allowed OPC UA service names (`Read`, `Write`, `Call`, `Subscribe`, `Browse`). |
+| `VALID_OPCUA_TEMPLATE_FIELDS` | Allowed fields in OPC UA resource-ID templates. |
+
 ## Serialization Contract
 
 `NormalizedAuthorizationRequest.to_dict()` and `ProtocolOperation.to_dict()` are
