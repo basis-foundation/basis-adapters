@@ -8,9 +8,12 @@ the canonical normalized request schema.
 Validated pairs:
 1. REST mapping examples (full + minimal) against rest-mapping.schema.json.
 2. The deliberately invalid REST mapping example FAILS validation.
-3. BACnet mapping example against bacnet-mapping.schema.json.
-4. Modbus mapping example against modbus-mapping.schema.json.
-5. OPC UA mapping example against opcua-mapping.schema.json.
+3. BACnet mapping example against bacnet-mapping.schema.json, and the
+   deliberately invalid BACnet mapping example FAILS validation.
+4. Modbus mapping example against modbus-mapping.schema.json, and the
+   deliberately invalid Modbus mapping example FAILS validation.
+5. OPC UA mapping example against opcua-mapping.schema.json, and the
+   deliberately invalid OPC UA mapping example FAILS validation.
 6. MQTT mapping example against mqtt-mapping.schema.json, and the
    deliberately invalid MQTT mapping example FAILS validation.
 7. DNP3 mapping example against dnp3-mapping.schema.json, and the
@@ -118,11 +121,30 @@ class TestMappingExamplesMatchSchemas:
     def test_bacnet_mapping_example_matches_schema(self) -> None:
         validate_example(BACNET_MAPPING_SCHEMA, EXAMPLES / "bacnet" / "mapping.example.json")
 
+    def test_bacnet_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(
+            load_json(EXAMPLES / "bacnet" / "mapping-invalid.example.json")
+        )
+        with pytest.raises(ValidationError):
+            validator_for(BACNET_MAPPING_SCHEMA).validate(instance)
+
     def test_modbus_mapping_example_matches_schema(self) -> None:
         validate_example(MODBUS_MAPPING_SCHEMA, EXAMPLES / "modbus" / "mapping.example.json")
 
+    def test_modbus_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(
+            load_json(EXAMPLES / "modbus" / "mapping-invalid.example.json")
+        )
+        with pytest.raises(ValidationError):
+            validator_for(MODBUS_MAPPING_SCHEMA).validate(instance)
+
     def test_opcua_mapping_example_matches_schema(self) -> None:
         validate_example(OPCUA_MAPPING_SCHEMA, EXAMPLES / "opcua" / "mapping.example.json")
+
+    def test_opcua_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(load_json(EXAMPLES / "opcua" / "mapping-invalid.example.json"))
+        with pytest.raises(ValidationError):
+            validator_for(OPCUA_MAPPING_SCHEMA).validate(instance)
 
     def test_mqtt_mapping_example_matches_schema(self) -> None:
         validate_example(MQTT_MAPPING_SCHEMA, EXAMPLES / "mqtt" / "mapping.example.json")

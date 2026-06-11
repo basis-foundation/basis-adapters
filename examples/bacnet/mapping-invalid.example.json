@@ -1,0 +1,60 @@
+{
+  "_comment": "Intentionally invalid BACnet mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by BacnetMappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized BACnet service 'DeleteObject' — only ReadProperty, WriteProperty, SubscribeCOV, CommandValue, and '*' are accepted",
+      "name": "bad-service",
+      "service": "DeleteObject",
+      "object_type": "analogInput",
+      "property_identifier": "presentValue",
+      "resource_type": "sensor",
+      "resource_id_template": "{object_type}:{object_instance}"
+    },
+    {
+      "_error": "INVALID: object_type is empty — must be a non-empty string or '*'",
+      "name": "empty-object-type",
+      "service": "ReadProperty",
+      "object_type": "",
+      "property_identifier": "presentValue",
+      "resource_type": "sensor",
+      "resource_id_template": "{object_type}:{object_instance}"
+    },
+    {
+      "_error": "INVALID: action 'fly' is not a recognized action verb",
+      "name": "invalid-action",
+      "service": "ReadProperty",
+      "object_type": "analogInput",
+      "property_identifier": "presentValue",
+      "action": "fly",
+      "resource_type": "sensor",
+      "resource_id_template": "{object_type}:{object_instance}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "service": "ReadProperty",
+      "object_type": "analogInput",
+      "property_identifier": "presentValue",
+      "resource_type": "",
+      "resource_id_template": "{object_type}:{object_instance}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {node_id} which is not a valid BACnet template field",
+      "name": "unknown-template-field",
+      "service": "ReadProperty",
+      "object_type": "analogInput",
+      "property_identifier": "presentValue",
+      "resource_type": "sensor",
+      "resource_id_template": "{node_id}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{object_type' — missing closing brace",
+      "name": "malformed-template",
+      "service": "ReadProperty",
+      "object_type": "analogInput",
+      "property_identifier": "presentValue",
+      "resource_type": "sensor",
+      "resource_id_template": "{object_type"
+    }
+  ]
+}

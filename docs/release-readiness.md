@@ -1,7 +1,17 @@
 # Release Readiness — v0.1.0 Checklist
 
-This document defines what must be true before a future `v0.1.0` release of
+This document defines what must be true before a `v0.1.0` release of
 `basis-adapters` is tagged. It is a gate, not a promise of a date.
+
+**Current status: v0.1.0 release candidate.** The initial planned adapter set —
+REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, and Niagara — is
+complete and normalization-complete. CI runs the four quality gates on every
+pull request and push to `main`. All examples and schemas are validated by the
+test suite, every adapter ships a deliberately invalid mapping example as a
+negative test case, and the canonical normalized request contract is enforced
+by cross-protocol contract tests. The version in `pyproject.toml` is `0.1.0`.
+No wire-protocol support is claimed, no live network behavior exists, and the
+library has no coupling to `basis-core` or `basis-gateway`.
 
 > **Release readiness does not mean production OT readiness.** A `v0.1.0` release
 > means the library's contracts, documentation, and quality gates are coherent and
@@ -53,6 +63,17 @@ This document defines what must be true before a future `v0.1.0` release of
 - [ ] REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, and Niagara adapters all emit the canonical
       normalized request shape (enforced by `tests/test_normalization_contract.py`).
 - [ ] No coupling to `basis-core` or `basis-gateway` has been introduced.
+
+## v0.1.0 Release Candidate Checklist
+
+The remaining steps between this release candidate and a tag:
+
+- [ ] Final pass of the four quality gates on `main` at the candidate commit.
+- [ ] Confirm `git ls-files` shows no generated artifacts or stray files.
+- [ ] Confirm the version in `pyproject.toml` (`0.1.0`) matches the tag to be
+      created.
+- [ ] Tag the release (separate, deliberate step — not automated by anything in
+      this repository).
 
 ## Out of Scope for v0.1.0
 

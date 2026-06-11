@@ -23,8 +23,10 @@ The governing principle:
 
 Adapters translate raw protocol operations (an HTTP request, a BACnet service
 primitive, a Modbus function, an OPC UA service request, an MQTT
-publish/subscribe intent, a DNP3 read or control intent) into a canonical,
-protocol-agnostic authorization request. That is the entire job. Everything else belongs elsewhere in the ecosystem.
+publish/subscribe intent, a DNP3 read or control intent, an IEC 61850 read,
+control, or reporting intent, a KNX group value operation, a Niagara platform
+operation) into a canonical, protocol-agnostic authorization request. That is
+the entire job. Everything else belongs elsewhere in the ecosystem.
 
 ## Architectural Guardrails
 

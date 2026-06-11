@@ -1,0 +1,54 @@
+{
+  "_comment": "Intentionally invalid Modbus mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by ModbusMappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized Modbus function 'ReadFileRecord' — only the supported read/write function names and '*' are accepted",
+      "name": "bad-function",
+      "function": "ReadFileRecord",
+      "register_type": "holding_register",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "_error": "INVALID: register_type is empty — must be a non-empty string or '*'",
+      "name": "empty-register-type",
+      "function": "ReadHoldingRegisters",
+      "register_type": "",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "_error": "INVALID: action 'fly' is not a recognized action verb",
+      "name": "invalid-action",
+      "function": "ReadHoldingRegisters",
+      "register_type": "holding_register",
+      "action": "fly",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "function": "ReadHoldingRegisters",
+      "register_type": "holding_register",
+      "resource_type": "",
+      "resource_id_template": "unit:{unit_id}:{register_type}:{address}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {node_id} which is not a valid Modbus template field",
+      "name": "unknown-template-field",
+      "function": "ReadHoldingRegisters",
+      "register_type": "holding_register",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{node_id}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{address' — missing closing brace",
+      "name": "malformed-template",
+      "function": "ReadHoldingRegisters",
+      "register_type": "holding_register",
+      "resource_type": "modbus_register",
+      "resource_id_template": "unit:{unit_id}:{address"
+    }
+  ]
+}

@@ -14,10 +14,13 @@ examples/
     mapping-invalid.example.json   deliberately invalid config (negative test case)
   bacnet/
     mapping.example.json           BACnet mapping config
+    mapping-invalid.example.json   deliberately invalid config (negative test case)
   modbus/
     mapping.example.json           Modbus mapping config
+    mapping-invalid.example.json   deliberately invalid config (negative test case)
   opcua/
     mapping.example.json           OPC UA mapping config
+    mapping-invalid.example.json   deliberately invalid config (negative test case)
   mqtt/
     mapping.example.json           MQTT mapping config
     mapping-invalid.example.json   deliberately invalid config (negative test case)
@@ -61,14 +64,9 @@ normalized actions, resource types, and resource IDs. Each protocol has its own
 mapping schema, but all of them validate fail-fast — a structurally invalid config
 raises `InvalidMappingError` at load time, before any operation is normalized.
 
-`examples/rest/mapping-invalid.example.json`,
-`examples/mqtt/mapping-invalid.example.json`,
-`examples/dnp3/mapping-invalid.example.json`,
-`examples/iec61850/mapping-invalid.example.json`,
-`examples/knx/mapping-invalid.example.json`, and
-`examples/niagara/mapping-invalid.example.json` are intentionally broken. They exist
-to prove that validation rejects bad configs; they must continue to fail schema
-validation and config loading.
+Every adapter directory also contains a `mapping-invalid.example.json` that is
+intentionally broken. These files exist to prove that validation rejects bad
+configs; they must continue to fail schema validation and config loading.
 
 ## Handoff Examples
 
