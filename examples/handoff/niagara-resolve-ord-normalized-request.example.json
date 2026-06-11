@@ -1,0 +1,33 @@
+{
+  "_comment": "Example handoff payload: Niagara adapter normalized request for a RESOLVE_ORD intent (source operation: resolve ORD 'station:|slot:/Drivers/BacnetNetwork/AHU1' on station 'station-east'). Produced by NiagaraAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). ORD resolution normalizes to 'browse' — a navigation intent. The ORD is preserved exactly as supplied: never parsed, never resolved by the adapter, never followed. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live Niagara communication.",
+  "protocol": "niagara",
+  "action": "browse",
+  "resource_type": "niagara_ord",
+  "resource_id": "niagara:station:station-east/ord:station:|slot:/Drivers/BacnetNetwork/AHU1",
+  "protocol_evidence": {
+    "protocol": "niagara",
+    "method": "RESOLVE_ORD",
+    "path": "station:station-east/ord:station:|slot:/Drivers/BacnetNetwork/AHU1",
+    "metadata": {
+      "operation": "RESOLVE_ORD",
+      "station": "station-east",
+      "host": "supervisor-1.example.internal",
+      "ord": "station:|slot:/Drivers/BacnetNetwork/AHU1",
+      "component": null,
+      "slot": null,
+      "point": null,
+      "point_type": null,
+      "value": null,
+      "facet": null,
+      "schedule": null,
+      "alarm": null,
+      "history": null,
+      "category": null,
+      "baja_type": null,
+      "nav_path": null,
+      "niagara_user": null,
+      "niagara_role": null
+    }
+  },
+  "subject_hint": null
+}

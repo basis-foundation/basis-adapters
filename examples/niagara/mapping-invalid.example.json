@@ -1,0 +1,70 @@
+{
+  "_comment": "Intentionally invalid Niagara mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by NiagaraMappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized Niagara operation 'FOX_LOGIN' — only the supported platform-operation names and '*' are accepted",
+      "name": "bad-operation",
+      "operation": "FOX_LOGIN",
+      "station": "*",
+      "resource_type": "niagara_station",
+      "resource_id_template": "niagara:station:{station}"
+    },
+    {
+      "_error": "INVALID: action 'actuate' is not a recognized action verb",
+      "name": "invalid-action",
+      "operation": "COMMAND_POINT",
+      "station": "*",
+      "action": "actuate",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "operation": "READ_POINT",
+      "station": "*",
+      "resource_type": "",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {value} — values are evidence, never resource identity",
+      "name": "value-in-template",
+      "operation": "WRITE_POINT",
+      "station": "*",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}/{value}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {niagara_user} — Niagara users are evidence, never BASIS identity and never resource identity",
+      "name": "user-in-template",
+      "operation": "WRITE_POINT",
+      "station": "*",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/user:{niagara_user}/point:{point}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {niagara_role} — Niagara roles are evidence, never BASIS identity and never resource identity",
+      "name": "role-in-template",
+      "operation": "READ_POINT",
+      "station": "*",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/role:{niagara_role}/point:{point}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {facet} and {baja_type} — facets and Baja typing are evidence, never resource identity",
+      "name": "facet-in-template",
+      "operation": "READ_POINT",
+      "station": "*",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}/{facet}/{baja_type}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{station' — missing closing brace",
+      "name": "malformed-template",
+      "operation": "BROWSE",
+      "station": "*",
+      "resource_type": "niagara_station",
+      "resource_id_template": "niagara:station:{station"
+    }
+  ]
+}

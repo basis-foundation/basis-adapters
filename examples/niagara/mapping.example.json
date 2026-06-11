@@ -1,0 +1,165 @@
+{
+  "_comment": "Example Niagara adapter mapping configuration. Routes are evaluated in order; the first match wins. Use '*' as a wildcard for operation or station. Station names are matched verbatim — no host resolution, no supervisor topology inference. Values, facets, point types, baja types, nav paths, categories, niagara_user, and niagara_role are never template fields — they remain protocol evidence, and Niagara users/roles are never BASIS identity.",
+  "routes": [
+    {
+      "name": "read-any-point",
+      "operation": "READ_POINT",
+      "station": "*",
+      "action": "read",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "name": "read-any-component",
+      "operation": "READ_COMPONENT",
+      "station": "*",
+      "action": "read",
+      "resource_type": "niagara_component",
+      "resource_id_template": "niagara:station:{station}/component:{component}"
+    },
+    {
+      "name": "read-any-slot",
+      "operation": "READ_SLOT",
+      "station": "*",
+      "action": "read",
+      "resource_type": "niagara_slot",
+      "resource_id_template": "niagara:station:{station}/component:{component}/slot:{slot}"
+    },
+    {
+      "name": "read-any-history",
+      "operation": "READ_HISTORY",
+      "station": "*",
+      "action": "read",
+      "resource_type": "niagara_history",
+      "resource_id_template": "niagara:station:{station}/history:{history}"
+    },
+    {
+      "name": "read-any-alarm",
+      "operation": "READ_ALARM",
+      "station": "*",
+      "action": "read",
+      "resource_type": "niagara_alarm",
+      "resource_id_template": "niagara:station:{station}/alarm:{alarm}"
+    },
+    {
+      "name": "read-any-schedule",
+      "operation": "READ_SCHEDULE",
+      "station": "*",
+      "action": "read",
+      "resource_type": "niagara_schedule",
+      "resource_id_template": "niagara:station:{station}/schedule:{schedule}"
+    },
+    {
+      "name": "write-any-point",
+      "operation": "WRITE_POINT",
+      "station": "*",
+      "action": "write",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "name": "write-any-slot",
+      "operation": "WRITE_SLOT",
+      "station": "*",
+      "action": "write",
+      "resource_type": "niagara_slot",
+      "resource_id_template": "niagara:station:{station}/component:{component}/slot:{slot}"
+    },
+    {
+      "name": "update-any-schedule",
+      "operation": "UPDATE_SCHEDULE",
+      "station": "*",
+      "action": "write",
+      "resource_type": "niagara_schedule",
+      "resource_id_template": "niagara:station:{station}/schedule:{schedule}"
+    },
+    {
+      "name": "ack-any-alarm",
+      "operation": "ACK_ALARM",
+      "station": "*",
+      "action": "execute",
+      "resource_type": "niagara_alarm",
+      "resource_id_template": "niagara:station:{station}/alarm:{alarm}"
+    },
+    {
+      "name": "invoke-any-action",
+      "operation": "INVOKE_ACTION",
+      "station": "*",
+      "action": "execute",
+      "resource_type": "niagara_component",
+      "resource_id_template": "niagara:station:{station}/component:{component}"
+    },
+    {
+      "name": "command-any-point",
+      "operation": "COMMAND_POINT",
+      "station": "*",
+      "action": "execute",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "name": "override-any-point",
+      "operation": "OVERRIDE_POINT",
+      "station": "*",
+      "action": "execute",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "name": "release-any-override",
+      "operation": "RELEASE_OVERRIDE",
+      "station": "*",
+      "action": "execute",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "name": "resolve-any-ord",
+      "operation": "RESOLVE_ORD",
+      "station": "*",
+      "action": "browse",
+      "resource_type": "niagara_ord",
+      "resource_id_template": "niagara:station:{station}/ord:{ord}"
+    },
+    {
+      "name": "browse-any-station",
+      "operation": "BROWSE",
+      "station": "*",
+      "action": "browse",
+      "resource_type": "niagara_station",
+      "resource_id_template": "niagara:station:{station}"
+    },
+    {
+      "name": "list-any-children",
+      "operation": "LIST_CHILDREN",
+      "station": "*",
+      "action": "",
+      "resource_type": "niagara_component",
+      "resource_id_template": "niagara:station:{station}/component:{component}"
+    },
+    {
+      "name": "subscribe-any-point",
+      "operation": "SUBSCRIBE_POINT",
+      "station": "*",
+      "action": "subscribe",
+      "resource_type": "niagara_point",
+      "resource_id_template": "niagara:station:{station}/point:{point}"
+    },
+    {
+      "name": "subscribe-any-alarm",
+      "operation": "SUBSCRIBE_ALARM",
+      "station": "*",
+      "action": "subscribe",
+      "resource_type": "niagara_alarm",
+      "resource_id_template": "niagara:station:{station}/alarm:{alarm}"
+    },
+    {
+      "name": "subscribe-any-history",
+      "operation": "SUBSCRIBE_HISTORY",
+      "station": "*",
+      "action": "subscribe",
+      "resource_type": "niagara_history",
+      "resource_id_template": "niagara:station:{station}/history:{history}"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "_comment": "Example handoff payload: Niagara adapter normalized request for an OVERRIDE_POINT intent (source operation: operator override of point 'AHU1-SupplyTempSetpoint' on station 'station-east' to 68.0 at priority level 8 for 60 minutes). Produced by NiagaraAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). Override normalizes to 'execute' — an operational command, not a data write. The override value, level, and duration are preserved as evidence and never appear in the resource_id. niagara_user is evidence only — never BASIS identity, never subject_hint. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live Niagara communication.",
+  "protocol": "niagara",
+  "action": "execute",
+  "resource_type": "niagara_point",
+  "resource_id": "niagara:station:station-east/point:AHU1-SupplyTempSetpoint",
+  "protocol_evidence": {
+    "protocol": "niagara",
+    "method": "OVERRIDE_POINT",
+    "path": "station:station-east/point:AHU1-SupplyTempSetpoint",
+    "metadata": {
+      "operation": "OVERRIDE_POINT",
+      "station": "station-east",
+      "host": null,
+      "ord": null,
+      "component": null,
+      "slot": null,
+      "point": "AHU1-SupplyTempSetpoint",
+      "point_type": "NumericWritable",
+      "value": 68.0,
+      "facet": "units=°F",
+      "schedule": null,
+      "alarm": null,
+      "history": null,
+      "category": "HVAC",
+      "baja_type": "control:NumericWritable",
+      "nav_path": null,
+      "niagara_user": "operator1",
+      "niagara_role": "operator",
+      "override_level": 8,
+      "override_duration_minutes": 60
+    }
+  },
+  "subject_hint": null
+}

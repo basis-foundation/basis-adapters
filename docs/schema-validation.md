@@ -24,6 +24,8 @@ automated tests, so examples and schemas cannot silently drift apart.
 | `examples/iec61850/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/knx/mapping.example.json` | `schemas/knx-mapping.schema.json` |
 | `examples/knx/mapping-invalid.example.json` | must **fail** validation (negative case) |
+| `examples/niagara/mapping.example.json` | `schemas/niagara-mapping.schema.json` |
+| `examples/niagara/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/handoff/rest-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/bacnet-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/modbus-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
@@ -38,9 +40,13 @@ automated tests, so examples and schemas cannot silently drift apart.
 | `examples/handoff/knx-group-value-read-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/knx-group-value-write-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 | `examples/handoff/knx-observe-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/niagara-point-read-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/niagara-override-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/niagara-resolve-ord-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
+| `examples/handoff/niagara-ack-alarm-normalized-request.example.json` | `schemas/normalized-authorization-request.schema.json` |
 
 In addition, the tests verify that **live adapter output matches the schema**: each
-adapter (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX) is loaded with its example mapping,
+adapter (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, Niagara) is loaded with its example mapping,
 normalizes a representative operation, and the resulting `to_dict()` output is
 validated against the normalized request schema. This keeps the schemas honest against the
 implementation, not just against static example files.

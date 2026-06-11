@@ -19,10 +19,12 @@ Validated pairs:
    deliberately invalid IEC 61850 mapping example FAILS validation.
 9. KNX mapping example against knx-mapping.schema.json, and the deliberately
    invalid KNX mapping example FAILS validation.
-10. All handoff examples against normalized-authorization-request.schema.json.
-11. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850,
-    KNX) against the normalized request schema — schemas must match the
-    implementation, not just the example files.
+10. Niagara mapping example against niagara-mapping.schema.json, and the
+    deliberately invalid Niagara mapping example FAILS validation.
+11. All handoff examples against normalized-authorization-request.schema.json.
+12. Live adapter output (REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850,
+    KNX, Niagara) against the normalized request schema — schemas must match
+    the implementation, not just the example files.
 
 Convention: keys beginning with "_" (e.g. "_comment", "_error") are
 documentation annotations, not part of any contract. The adapters' from_dict()
@@ -49,6 +51,7 @@ from basis_adapters.knx import KnxAdapter, KnxMappingConfig, KnxOperation
 from basis_adapters.modbus import ModbusAdapter, ModbusMappingConfig, ModbusOperation
 from basis_adapters.models import AdapterContext, ProtocolOperation
 from basis_adapters.mqtt import MqttAdapter, MqttMappingConfig, MqttOperation
+from basis_adapters.niagara import NiagaraAdapter, NiagaraMappingConfig, NiagaraOperation
 from basis_adapters.opcua import OpcuaAdapter, OpcuaMappingConfig, OpcuaOperation
 from basis_adapters.rest import RestAdapter, RestMappingConfig
 
@@ -64,6 +67,7 @@ MQTT_MAPPING_SCHEMA = SCHEMAS / "mqtt-mapping.schema.json"
 DNP3_MAPPING_SCHEMA = SCHEMAS / "dnp3-mapping.schema.json"
 IEC61850_MAPPING_SCHEMA = SCHEMAS / "iec61850-mapping.schema.json"
 KNX_MAPPING_SCHEMA = SCHEMAS / "knx-mapping.schema.json"
+NIAGARA_MAPPING_SCHEMA = SCHEMAS / "niagara-mapping.schema.json"
 NORMALIZED_REQUEST_SCHEMA = SCHEMAS / "normalized-authorization-request.schema.json"
 
 
@@ -154,6 +158,16 @@ class TestMappingExamplesMatchSchemas:
         with pytest.raises(ValidationError):
             validator_for(KNX_MAPPING_SCHEMA).validate(instance)
 
+    def test_niagara_mapping_example_matches_schema(self) -> None:
+        validate_example(NIAGARA_MAPPING_SCHEMA, EXAMPLES / "niagara" / "mapping.example.json")
+
+    def test_niagara_mapping_invalid_example_fails_schema(self) -> None:
+        instance = strip_annotations(
+            load_json(EXAMPLES / "niagara" / "mapping-invalid.example.json")
+        )
+        with pytest.raises(ValidationError):
+            validator_for(NIAGARA_MAPPING_SCHEMA).validate(instance)
+
 
 class TestHandoffExamplesMatchNormalizedRequestSchema:
     @pytest.mark.parametrize(
@@ -173,6 +187,10 @@ class TestHandoffExamplesMatchNormalizedRequestSchema:
             "knx-group-value-read-normalized-request.example.json",
             "knx-group-value-write-normalized-request.example.json",
             "knx-observe-normalized-request.example.json",
+            "niagara-point-read-normalized-request.example.json",
+            "niagara-override-normalized-request.example.json",
+            "niagara-resolve-ord-normalized-request.example.json",
+            "niagara-ack-alarm-normalized-request.example.json",
         ],
     )
     def test_handoff_example_matches_schema(self, example_name: str) -> None:
@@ -468,6 +486,96 @@ class TestLiveAdapterOutputMatchesNormalizedRequestSchema:
         assert d["resource_id"] == "knx:group:2/0/14"
         validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
 
+    def test_niagara_point_read_output_matches_schema(self) -> None:
+        config = NiagaraMappingConfig.from_dict(
+            load_json(EXAMPLES / "niagara" / "mapping.example.json")
+        )
+        adapter = NiagaraAdapter(
+            mapping=config, context=AdapterContext(adapter_id="niagara-schema")
+        )
+        op = NiagaraOperation(
+            operation="READ_POINT",
+            station="station-east",
+            point="AHU1-SupplyTemp",
+            point_type="NumericPoint",
+            baja_type="control:NumericPoint",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "read"
+        assert d["resource_id"] == "niagara:station:station-east/point:AHU1-SupplyTemp"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_niagara_override_output_matches_schema(self) -> None:
+        config = NiagaraMappingConfig.from_dict(
+            load_json(EXAMPLES / "niagara" / "mapping.example.json")
+        )
+        adapter = NiagaraAdapter(
+            mapping=config, context=AdapterContext(adapter_id="niagara-schema")
+        )
+        op = NiagaraOperation(
+            operation="OVERRIDE_POINT",
+            station="station-east",
+            point="AHU1-SupplyTempSetpoint",
+            point_type="NumericWritable",
+            value=68.0,
+            niagara_user="operator1",
+            niagara_role="operator",
+            metadata={"override_level": 8, "override_duration_minutes": 60},
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "execute"
+        # The override value stays in evidence, never in the resource ID.
+        assert d["resource_id"] == "niagara:station:station-east/point:AHU1-SupplyTempSetpoint"
+        assert d["protocol_evidence"]["metadata"]["value"] == 68.0
+        # Niagara users/roles are evidence only — never subject_hint.
+        assert d["subject_hint"] is None
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_niagara_resolve_ord_output_matches_schema(self) -> None:
+        config = NiagaraMappingConfig.from_dict(
+            load_json(EXAMPLES / "niagara" / "mapping.example.json")
+        )
+        adapter = NiagaraAdapter(
+            mapping=config, context=AdapterContext(adapter_id="niagara-schema")
+        )
+        ord_value = "station:|slot:/Drivers/BacnetNetwork/AHU1"
+        op = NiagaraOperation(
+            operation="RESOLVE_ORD",
+            station="station-east",
+            ord=ord_value,
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "browse"
+        # The ORD is preserved exactly — never parsed, resolved, or followed.
+        assert d["resource_id"] == f"niagara:station:station-east/ord:{ord_value}"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
+    def test_niagara_ack_alarm_output_matches_schema(self) -> None:
+        config = NiagaraMappingConfig.from_dict(
+            load_json(EXAMPLES / "niagara" / "mapping.example.json")
+        )
+        adapter = NiagaraAdapter(
+            mapping=config, context=AdapterContext(adapter_id="niagara-schema")
+        )
+        op = NiagaraOperation(
+            operation="ACK_ALARM",
+            station="station-east",
+            alarm="AHU1-HighSupplyTemp",
+            niagara_user="operator1",
+        )
+        result = adapter.normalize(op)
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["action"] == "execute"
+        assert d["resource_id"] == "niagara:station:station-east/alarm:AHU1-HighSupplyTemp"
+        validator_for(NORMALIZED_REQUEST_SCHEMA).validate(d)
+
 
 class TestSchemasAreThemselvesValid:
     @pytest.mark.parametrize(
@@ -481,6 +589,7 @@ class TestSchemasAreThemselvesValid:
             DNP3_MAPPING_SCHEMA,
             IEC61850_MAPPING_SCHEMA,
             KNX_MAPPING_SCHEMA,
+            NIAGARA_MAPPING_SCHEMA,
             NORMALIZED_REQUEST_SCHEMA,
         ],
         ids=lambda p: p.name,

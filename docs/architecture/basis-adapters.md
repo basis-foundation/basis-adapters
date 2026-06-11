@@ -20,7 +20,8 @@ Adapters do not answer whether the request should be allowed.
   OPC UA node identifiers and service requests, MQTT topics and publish/subscribe
   operations, DNP3 object groups, point indexes, and control operations, IEC 61850
   IED/logical device/logical node/data object addressing and control models, KNX
-  group addresses, datapoint types, and group value operations.
+  group addresses, datapoint types, and group value operations, Niagara
+  station/ORD/component/point addressing and platform operations.
 - Normalization: mapping protocol operations to a stable, protocol-agnostic
   authorization request shape (`NormalizedAuthorizationRequest`).
 - Mapping configuration: rules that describe which protocol operations correspond to
@@ -106,10 +107,11 @@ security bypass. Adapters must not receive, inspect, or act on authorization dec
 
 ## Current Protocol Support
 
-Eight adapters are implemented and normalization-complete: REST, BACnet, Modbus,
-OPC UA, MQTT, DNP3, IEC 61850, and KNX. All eight emit the canonical Normalized
-Authorization Request shape and participate in the cross-protocol contract
-tests. Planned protocols (Niagara) are tracked in the README roadmap.
+Nine adapters are implemented and normalization-complete: REST, BACnet, Modbus,
+OPC UA, MQTT, DNP3, IEC 61850, KNX, and Niagara. All nine emit the canonical
+Normalized Authorization Request shape and participate in the cross-protocol
+contract tests. With Niagara complete, the initial planned adapter roadmap
+(see the README) is complete.
 
 ### REST
 
@@ -186,6 +188,20 @@ normalizes to `read`, `GROUP_VALUE_WRITE` to `write`, `GROUP_VALUE_RESPONSE`
 intent) to `subscribe`. Group addresses are matched and preserved verbatim —
 no topology expansion, no semantic inference — and DPTs, values, and priority
 are preserved as evidence. See [knx-adapter.md](knx-adapter.md).
+
+### Niagara
+
+Niagara (the Niagara Framework) is a building automation **platform**, not a
+device protocol: stations expose components, ords, points, histories,
+schedules, alarms, users, and supervisory workflows. The adapter normalizes
+representative platform operations: `READ_*` to `read`; `WRITE_POINT`,
+`WRITE_SLOT`, and `UPDATE_SCHEDULE` to `write`; `ACK_ALARM`, `INVOKE_ACTION`,
+`COMMAND_POINT`, `OVERRIDE_POINT`, and `RELEASE_OVERRIDE` to `execute`
+(operational commands, not data writes); `BROWSE`, `RESOLVE_ORD`, and
+`LIST_CHILDREN` to `browse`; and `SUBSCRIBE_*` to `subscribe`. ORDs are
+preserved exactly — never parsed, resolved, or followed — and Niagara users
+and roles are evidence only, never BASIS identity. See
+[niagara-adapter.md](niagara-adapter.md).
 
 ---
 

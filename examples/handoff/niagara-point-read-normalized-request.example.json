@@ -1,0 +1,33 @@
+{
+  "_comment": "Example handoff payload: Niagara adapter normalized request for a READ_POINT intent (source operation: read of point 'AHU1-SupplyTemp' on station 'station-east'). Produced by NiagaraAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). Niagara platform context (ord, point type, facet, baja type, nav path) is preserved verbatim in protocol_evidence. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live Niagara communication.",
+  "protocol": "niagara",
+  "action": "read",
+  "resource_type": "niagara_point",
+  "resource_id": "niagara:station:station-east/point:AHU1-SupplyTemp",
+  "protocol_evidence": {
+    "protocol": "niagara",
+    "method": "READ_POINT",
+    "path": "station:station-east/ord:station:|slot:/Drivers/BacnetNetwork/AHU1/points/SupplyTemp/point:AHU1-SupplyTemp",
+    "metadata": {
+      "operation": "READ_POINT",
+      "station": "station-east",
+      "host": "supervisor-1.example.internal",
+      "ord": "station:|slot:/Drivers/BacnetNetwork/AHU1/points/SupplyTemp",
+      "component": null,
+      "slot": null,
+      "point": "AHU1-SupplyTemp",
+      "point_type": "NumericPoint",
+      "value": null,
+      "facet": "units=°F",
+      "schedule": null,
+      "alarm": null,
+      "history": null,
+      "category": "HVAC",
+      "baja_type": "control:NumericPoint",
+      "nav_path": "/Drivers/BacnetNetwork/AHU1/points/SupplyTemp",
+      "niagara_user": null,
+      "niagara_role": null
+    }
+  },
+  "subject_hint": null
+}

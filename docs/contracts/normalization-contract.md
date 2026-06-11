@@ -2,14 +2,14 @@
 
 ## Status
 
-Stable — Phase 13
+Stable — Phase 14
 
 ## Overview
 
 Every adapter in `basis-adapters` produces a single output type:
 `NormalizedAuthorizationRequest`. This document defines the canonical shape of
-that output, how REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX
-all map into it, and how an enforcement boundary should consume it.
+that output, how REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, and
+Niagara all map into it, and how an enforcement boundary should consume it.
 
 ---
 
@@ -32,7 +32,7 @@ participate in that decision.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`, `"dnp3"`, `"iec61850"`, `"knx"`) |
+| `protocol` | string | yes | Originating protocol identifier (`"rest"`, `"bacnet"`, `"modbus"`, `"opcua"`, `"mqtt"`, `"dnp3"`, `"iec61850"`, `"knx"`, `"niagara"`) |
 | `action` | string | yes | Normalized action verb (`"read"`, `"write"`, `"control"`, `"discover"`, `"subscribe"`, `"execute"`, `"browse"`) |
 | `resource_type` | string | yes | Logical resource category (e.g. `"point"`, `"device"`, `"schedule"`) |
 | `resource_id` | string | yes | Stable identifier for the target resource |
@@ -130,7 +130,18 @@ evidence only — it is never treated as verified identity — and values,
 payloads, priority, and datapoint types stay in evidence, never in resource
 IDs.
 
-All eight structures are nested under `protocol_evidence` so enforcement boundaries
+**Niagara:** `method` is the Niagara operation name (e.g. `READ_POINT`,
+`OVERRIDE_POINT`, `RESOLVE_ORD`). `path` is a deterministic station-rooted
+address (e.g. `station:station-east/point:AHU1-SupplyTemp`). `metadata`
+carries `operation`, `station`, `host`, `ord`, `component`, `slot`, `point`,
+`point_type`, `value`, `facet`, `schedule`, `alarm`, `history`, `category`,
+`baja_type`, `nav_path`, `niagara_user`, and `niagara_role`. Note that
+`niagara_user` and `niagara_role` are evidence only — they are never treated
+as BASIS identity, never copied into `subject_hint`, and never role-mapped —
+and values, facets, and platform typing stay in evidence, never in resource
+IDs.
+
+All nine structures are nested under `protocol_evidence` so enforcement boundaries
 and audit systems can always find protocol-specific detail without it polluting
 the canonical fields.
 
@@ -313,7 +324,42 @@ matched and preserved verbatim — no topology expansion, no semantic
 inference. An `OBSERVE` of group address `2/0/14` produces
 `action = "subscribe"` with no implication of live bus monitoring.
 
-All eight protocols produce the same field set. The canonical shape is
+## How Niagara Maps into the Canonical Shape
+
+```
+Niagara operation → action (via route action or default operation→action map:
+                   READ_COMPONENT/READ_POINT/READ_SLOT/READ_HISTORY/
+                   READ_ALARM/READ_SCHEDULE→read,
+                   WRITE_POINT/WRITE_SLOT/UPDATE_SCHEDULE→write,
+                   ACK_ALARM/INVOKE_ACTION/COMMAND_POINT/OVERRIDE_POINT/
+                   RELEASE_OVERRIDE→execute,
+                   BROWSE/RESOLVE_ORD/LIST_CHILDREN→browse,
+                   SUBSCRIBE_POINT/SUBSCRIBE_ALARM/SUBSCRIBE_HISTORY→subscribe)
+route.resource_type → resource_type
+resource_id_template rendered with Niagara fields → resource_id
+"niagara"        → protocol
+NiagaraOperation.to_protocol_operation() → protocol_evidence
+metadata["subject_hint"] → subject_hint
+```
+
+Template fields for Niagara: `{operation}`, `{station}`, `{ord}`,
+`{component}`, `{slot}`, `{point}`, `{schedule}`, `{alarm}`, `{history}`.
+Optional fields are only substitutable when present on the operation. Values,
+facets, point types, baja types, nav paths, categories, Niagara users, and
+Niagara roles are never template fields — they remain protocol evidence, and
+Niagara users/roles are never BASIS identity.
+
+Example: a `READ_POINT` of point `AHU1-SupplyTemp` on station `station-east`
+with template `niagara:station:{station}/point:{point}` produces
+`resource_id = "niagara:station:station-east/point:AHU1-SupplyTemp"`; an
+`OVERRIDE_POINT` of the same point produces `action = "execute"` — an
+operational command, not a data write, with the override value, level, and
+duration in evidence, never in the resource ID. A `RESOLVE_ORD` of
+`station:|slot:/Drivers/BacnetNetwork/AHU1` with template
+`niagara:station:{station}/ord:{ord}` produces `action = "browse"` with the
+ORD preserved exactly — never parsed, never resolved, never followed.
+
+All nine protocols produce the same field set. The canonical shape is
 identical; only `protocol` and `protocol_evidence` internals differ.
 
 ---
@@ -407,4 +453,4 @@ Example handoff payloads are in `examples/handoff/`.
 - **`schemas/normalized-authorization-request.schema.json`** — machine-readable
   JSON Schema for the serialized form.
 - **`examples/handoff/`** — concrete example payloads for REST, BACnet,
-  Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX.
+  Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, and Niagara.

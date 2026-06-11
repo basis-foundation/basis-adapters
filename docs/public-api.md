@@ -133,6 +133,18 @@ detail and may change without notice.
 | `VALID_KNX_PRIORITIES` | Allowed KNX frame priorities (`system`, `urgent`, `normal`, `low`). |
 | `VALID_KNX_TEMPLATE_FIELDS` | Allowed fields in KNX resource-ID templates. |
 
+## Niagara (`basis_adapters.niagara`)
+
+| Name | Purpose |
+|---|---|
+| `NiagaraAdapter` | Normalizes Niagara platform read/write/invoke/browse/subscribe intents into a `NormalizedAuthorizationRequest`. |
+| `NiagaraMappingConfig` | Validated Niagara mapping configuration; `from_dict()` constructor. Schema: `schemas/niagara-mapping.schema.json`. |
+| `NiagaraOperation` | Typed Niagara platform operation (operation, station, host, ord, component/slot/point/schedule/alarm/history identity, point type/value/facet/category/baja type/nav path evidence, niagara_user/niagara_role evidence). |
+| `NiagaraRouteMapping` | A single Niagara route mapping entry. |
+| `VALID_NIAGARA_ACTIONS` | Normalized action verbs accepted for Niagara routes (shared set plus `execute` and `browse`, both pre-existing). |
+| `VALID_NIAGARA_OPERATIONS` | Allowed Niagara operation names (`READ_COMPONENT`, `READ_POINT`, `READ_SLOT`, `READ_HISTORY`, `READ_ALARM`, `READ_SCHEDULE`, `WRITE_POINT`, `WRITE_SLOT`, `UPDATE_SCHEDULE`, `ACK_ALARM`, `INVOKE_ACTION`, `COMMAND_POINT`, `OVERRIDE_POINT`, `RELEASE_OVERRIDE`, `BROWSE`, `RESOLVE_ORD`, `LIST_CHILDREN`, `SUBSCRIBE_POINT`, `SUBSCRIBE_ALARM`, `SUBSCRIBE_HISTORY`). |
+| `VALID_NIAGARA_TEMPLATE_FIELDS` | Allowed fields in Niagara resource-ID templates. |
+
 ## Serialization Contract
 
 `NormalizedAuthorizationRequest.to_dict()` and `ProtocolOperation.to_dict()` are
