@@ -11,6 +11,10 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = []
 
+[project.urls]
+Repository = "https://github.com/basis-foundation/basis-adapters"
+Issues = "https://github.com/basis-foundation/basis-adapters/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",

@@ -1,0 +1,54 @@
+{
+  "_comment": "Intentionally invalid OPC UA mapping examples — for documentation and testing reference only. Each route demonstrates a specific validation error. This file is NOT a valid mapping config and will be rejected by OpcuaMappingConfig.from_dict().",
+  "routes": [
+    {
+      "_error": "INVALID: unrecognized OPC UA service 'HistoryRead' — only Read, Write, Call, Subscribe, Browse, and '*' are accepted",
+      "name": "bad-service",
+      "service": "HistoryRead",
+      "attribute_id": "Value",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id}:{attribute_id}"
+    },
+    {
+      "_error": "INVALID: attribute_id is empty — must be a non-empty string or '*'",
+      "name": "empty-attribute-id",
+      "service": "Read",
+      "attribute_id": "",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id}:{attribute_id}"
+    },
+    {
+      "_error": "INVALID: action 'fly' is not a recognized action verb",
+      "name": "invalid-action",
+      "service": "Read",
+      "attribute_id": "Value",
+      "action": "fly",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id}:{attribute_id}"
+    },
+    {
+      "_error": "INVALID: resource_type is empty — must be a non-empty string",
+      "name": "empty-resource-type",
+      "service": "Read",
+      "attribute_id": "Value",
+      "resource_type": "",
+      "resource_id_template": "{node_id}:{attribute_id}"
+    },
+    {
+      "_error": "INVALID: resource_id_template references {topic} which is not a valid OPC UA template field",
+      "name": "unknown-template-field",
+      "service": "Read",
+      "attribute_id": "Value",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{topic}"
+    },
+    {
+      "_error": "INVALID: malformed template token '{node_id' — missing closing brace",
+      "name": "malformed-template",
+      "service": "Read",
+      "attribute_id": "Value",
+      "resource_type": "opcua_node",
+      "resource_id_template": "{node_id"
+    }
+  ]
+}

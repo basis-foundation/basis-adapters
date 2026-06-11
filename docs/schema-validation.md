@@ -14,8 +14,11 @@ automated tests, so examples and schemas cannot silently drift apart.
 | `examples/rest/mapping-minimal.example.json` | `schemas/rest-mapping.schema.json` |
 | `examples/rest/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/bacnet/mapping.example.json` | `schemas/bacnet-mapping.schema.json` |
+| `examples/bacnet/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/modbus/mapping.example.json` | `schemas/modbus-mapping.schema.json` |
+| `examples/modbus/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/opcua/mapping.example.json` | `schemas/opcua-mapping.schema.json` |
+| `examples/opcua/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/mqtt/mapping.example.json` | `schemas/mqtt-mapping.schema.json` |
 | `examples/mqtt/mapping-invalid.example.json` | must **fail** validation (negative case) |
 | `examples/dnp3/mapping.example.json` | `schemas/dnp3-mapping.schema.json` |

@@ -5,10 +5,11 @@ Protocol adapters for the BASIS ecosystem.
 Adapters normalize protocol-specific operations into BASIS authorization semantics.
 They do not evaluate policy. They do not enforce decisions. They translate.
 
-> **Status: early-stage, pre-v1.** Pure normalization library — no live protocol
-> communication, no network I/O. Not audited, no production claims. See
-> [docs/release-readiness.md](docs/release-readiness.md) for what a `v0.1.0`
-> release will require.
+> **Status: v0.1.0 release candidate.** The initial planned adapter set (nine
+> adapters) is complete and normalization-complete. Pure normalization library —
+> no live protocol communication, no network I/O. Not audited, no production
+> claims. See [docs/release-readiness.md](docs/release-readiness.md) for the
+> release gate.
 
 ---
 
@@ -39,17 +40,17 @@ Adapters never see the decision. They do not allow or deny anything.
 
 ## Protocol Support
 
-| Protocol | Adapter | Status |
-|---|---|---|
-| REST | `basis_adapters.rest` | Normalization-complete |
-| BACnet | `basis_adapters.bacnet` | Normalization-complete |
-| Modbus | `basis_adapters.modbus` | Normalization-complete |
-| OPC UA | `basis_adapters.opcua` | Normalization-complete |
-| MQTT | `basis_adapters.mqtt` | Normalization-complete |
-| DNP3 | `basis_adapters.dnp3` | Normalization-complete |
-| IEC 61850 | `basis_adapters.iec61850` | Normalization-complete |
-| KNX | `basis_adapters.knx` | Normalization-complete |
-| Niagara | `basis_adapters.niagara` | Normalization-complete |
+| Protocol | Adapter | Domain | Status |
+|---|---|---|---|
+| REST | `basis_adapters.rest` | Web/API operations | Normalization-complete |
+| BACnet | `basis_adapters.bacnet` | Building automation object/property operations | Normalization-complete |
+| Modbus | `basis_adapters.modbus` | Register/function operations | Normalization-complete |
+| OPC UA | `basis_adapters.opcua` | Industrial nodes, methods, browsing, subscriptions | Normalization-complete |
+| MQTT | `basis_adapters.mqtt` | Topic publish/subscribe operations | Normalization-complete |
+| DNP3 | `basis_adapters.dnp3` | Utility SCADA reads, controls, unsolicited enablement | Normalization-complete |
+| IEC 61850 | `basis_adapters.iec61850` | Substation/power systems logical nodes, controls, reporting | Normalization-complete |
+| KNX | `basis_adapters.knx` | Building automation group-address operations | Normalization-complete |
+| Niagara | `basis_adapters.niagara` | BAS platform operations (stations, ORDs, points, alarms) | Normalization-complete |
 
 **Normalization-complete** means the adapter's normalization model and
 architecture are implemented, contract-tested, and stable: it accepts typed
@@ -66,6 +67,10 @@ All nine adapters emit the same canonical normalized request shape, defined in
 and proven by cross-protocol contract tests.
 
 ### The Normalization Contract
+
+basis-adapters demonstrates that diverse OT protocol and platform operations
+can normalize into a shared authorization request model while preserving
+protocol evidence for auditability.
 
 Protocols do not converge. Outputs converge.
 
@@ -93,11 +98,12 @@ Completed adapters (normalization-complete):
 - KNX
 - Niagara
 
-**The initial planned adapter set is now complete.** Every adapter on the
-original roadmap is normalization-complete. The roadmap remains deliberately
-focused: any future protocol would be added one at a time and must conform to
-the canonical normalized request shape (see
-[CONTRIBUTING.md](CONTRIBUTING.md)).
+**The initial planned adapter set is complete.** Every adapter on the original
+roadmap is normalization-complete. No further protocols are planned. Future
+work, if any, falls into three categories: optional protocol expansion (one at
+a time, conforming to the canonical normalized request shape — see
+[CONTRIBUTING.md](CONTRIBUTING.md)), runtime integrations (a separate decision,
+outside this library's scope), and release hardening.
 
 ## What Adapters Do
 
