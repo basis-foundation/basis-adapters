@@ -1,5 +1,6 @@
 """
-Cross-protocol normalization contract tests — Phases 5, 7, 10, 11, 12, and 13.
+Cross-protocol normalization contract tests — Phases 5, 7, 10, 11, 12, 13,
+and 14.
 
 These tests prove that:
 1. REST normalized requests serialize to the canonical shape.
@@ -10,15 +11,16 @@ These tests prove that:
 6. DNP3 normalized requests serialize to the canonical shape.
 7. IEC 61850 normalized requests serialize to the canonical shape.
 8. KNX normalized requests serialize to the canonical shape.
-9. Required fields are present for all eight protocols.
-10. Protocol-specific evidence is nested under "protocol_evidence".
-11. No authorization decision field is present in the output.
-12. No resolved subject identity field is present (only the unverified hint).
-13. No gateway transport code is invoked.
-14. No basis_core import exists anywhere in basis_adapters.
-15. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX outputs
-    share exactly the same top-level field set.
-16. Serialization is deterministic.
+9. Niagara normalized requests serialize to the canonical shape.
+10. Required fields are present for all nine protocols.
+11. Protocol-specific evidence is nested under "protocol_evidence".
+12. No authorization decision field is present in the output.
+13. No resolved subject identity field is present (only the unverified hint).
+14. No gateway transport code is invoked.
+15. No basis_core import exists anywhere in basis_adapters.
+16. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, and Niagara
+    outputs share exactly the same top-level field set.
+17. Serialization is deterministic.
 
 The contract document is: docs/contracts/normalization-contract.md
 The JSON Schema is: schemas/normalized-authorization-request.schema.json
@@ -51,6 +53,12 @@ from basis_adapters.models import (
 )
 from basis_adapters.mqtt.adapter import MqttAdapter
 from basis_adapters.mqtt.mapping import MqttMappingConfig, MqttOperation, MqttRouteMapping
+from basis_adapters.niagara.adapter import NiagaraAdapter
+from basis_adapters.niagara.mapping import (
+    NiagaraMappingConfig,
+    NiagaraOperation,
+    NiagaraRouteMapping,
+)
 from basis_adapters.opcua.adapter import OpcuaAdapter
 from basis_adapters.opcua.mapping import OpcuaMappingConfig, OpcuaOperation, OpcuaRouteMapping
 from basis_adapters.rest.adapter import RestAdapter
@@ -383,6 +391,44 @@ def _knx_normalized() -> NormalizedAuthorizationRequest:
     adapter = _knx_adapter()
     result = adapter.normalize(_knx_operation())
     assert result.success, f"KNX normalization failed: {result.error}"
+    assert result.request is not None
+    return result.request
+
+
+def _niagara_adapter() -> NiagaraAdapter:
+    route = NiagaraRouteMapping(
+        operation="READ_POINT",
+        station="*",
+        action="read",
+        resource_type="niagara_point",
+        resource_id_template="niagara:station:{station}/point:{point}",
+        name="read-any-point",
+    )
+    config = NiagaraMappingConfig(routes=[route])
+    ctx = AdapterContext(adapter_id="niagara-normalization-test")
+    return NiagaraAdapter(mapping=config, context=ctx)
+
+
+def _niagara_operation(subject_hint: str | None = None) -> NiagaraOperation:
+    meta: dict[str, Any] = {}
+    if subject_hint is not None:
+        meta["subject_hint"] = subject_hint
+    return NiagaraOperation(
+        operation="READ_POINT",
+        station="station-east",
+        point="AHU1-SupplyTemp",
+        point_type="NumericPoint",
+        baja_type="control:NumericPoint",
+        niagara_user="operator1",
+        niagara_role="operator",
+        metadata=meta,
+    )
+
+
+def _niagara_normalized() -> NormalizedAuthorizationRequest:
+    adapter = _niagara_adapter()
+    result = adapter.normalize(_niagara_operation())
+    assert result.success, f"Niagara normalization failed: {result.error}"
     assert result.request is not None
     return result.request
 
@@ -998,8 +1044,95 @@ class TestKnxCanonicalShape:
 
 
 # ---------------------------------------------------------------------------
-# 6. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX share the
-#    same canonical field set
+# 9. Niagara serializes to canonical shape
+# ---------------------------------------------------------------------------
+
+
+class TestNiagaraCanonicalShape:
+    def test_to_dict_returns_dict(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert isinstance(d, dict)
+
+    def test_top_level_fields_exactly_canonical(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert set(d.keys()) == CANONICAL_FIELDS
+
+    def test_protocol_is_niagara(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert d["protocol"] == "niagara"
+
+    def test_read_action_is_read(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert d["action"] == "read"
+
+    def test_resource_type_is_string(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert isinstance(d["resource_type"], str)
+        assert len(d["resource_type"]) > 0
+
+    def test_resource_id_is_string(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert isinstance(d["resource_id"], str)
+        assert len(d["resource_id"]) > 0
+
+    def test_protocol_evidence_present_and_nested(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert "protocol_evidence" in d
+        assert isinstance(d["protocol_evidence"], dict)
+
+    def test_protocol_evidence_fields_exactly_canonical(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert set(d["protocol_evidence"].keys()) == CANONICAL_EVIDENCE_FIELDS
+
+    def test_protocol_evidence_metadata_contains_niagara_fields(self) -> None:
+        d = _niagara_normalized().to_dict()
+        meta = d["protocol_evidence"]["metadata"]
+        assert "operation" in meta
+        assert "station" in meta
+        assert "host" in meta
+        assert "ord" in meta
+        assert "component" in meta
+        assert "slot" in meta
+        assert "point" in meta
+        assert "point_type" in meta
+        assert "value" in meta
+        assert "facet" in meta
+        assert "schedule" in meta
+        assert "alarm" in meta
+        assert "history" in meta
+        assert "category" in meta
+        assert "baja_type" in meta
+        assert "nav_path" in meta
+        assert "niagara_user" in meta
+        assert "niagara_role" in meta
+
+    def test_no_forbidden_fields(self) -> None:
+        d = _niagara_normalized().to_dict()
+        present = FORBIDDEN_FIELDS & set(d.keys())
+        assert not present, f"Forbidden fields found in Niagara output: {present}"
+
+    def test_subject_hint_none_when_absent(self) -> None:
+        # The operation carries niagara_user/niagara_role, but they are
+        # evidence only — subject_hint stays None unless explicitly given.
+        d = _niagara_normalized().to_dict()
+        assert d["subject_hint"] is None
+
+    def test_subject_hint_forwarded_when_present(self) -> None:
+        adapter = _niagara_adapter()
+        result = adapter.normalize(_niagara_operation(subject_hint="operator@example.internal"))
+        assert result.success and result.request is not None
+        d = result.request.to_dict()
+        assert d["subject_hint"] == "operator@example.internal"
+
+    def test_output_is_json_serializable(self) -> None:
+        d = _niagara_normalized().to_dict()
+        encoded = json.dumps(d)
+        assert len(encoded) > 0
+
+
+# ---------------------------------------------------------------------------
+# 6. REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, and Niagara
+#    share the same canonical field set
 # ---------------------------------------------------------------------------
 
 
@@ -1256,7 +1389,80 @@ class TestCrossProtocolFieldSetParity:
             f"Field set mismatch:\n  KNX-only: {knx_only}\n  IEC 61850-only: {iec61850_only}"
         )
 
-    def test_all_eight_evidence_field_sets_identical(self) -> None:
+    def test_niagara_rest_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        rest_keys = set(_rest_normalized().to_dict().keys())
+        niagara_only = niagara_keys - rest_keys
+        rest_only = rest_keys - niagara_keys
+        assert niagara_keys == rest_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n  REST-only: {rest_only}"
+        )
+
+    def test_niagara_bacnet_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        bacnet_keys = set(_bacnet_normalized().to_dict().keys())
+        niagara_only = niagara_keys - bacnet_keys
+        bacnet_only = bacnet_keys - niagara_keys
+        assert niagara_keys == bacnet_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n  BACnet-only: {bacnet_only}"
+        )
+
+    def test_niagara_modbus_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        modbus_keys = set(_modbus_normalized().to_dict().keys())
+        niagara_only = niagara_keys - modbus_keys
+        modbus_only = modbus_keys - niagara_keys
+        assert niagara_keys == modbus_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n  Modbus-only: {modbus_only}"
+        )
+
+    def test_niagara_opcua_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        opcua_keys = set(_opcua_normalized().to_dict().keys())
+        niagara_only = niagara_keys - opcua_keys
+        opcua_only = opcua_keys - niagara_keys
+        assert niagara_keys == opcua_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n  OPC UA-only: {opcua_only}"
+        )
+
+    def test_niagara_mqtt_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        mqtt_keys = set(_mqtt_normalized().to_dict().keys())
+        niagara_only = niagara_keys - mqtt_keys
+        mqtt_only = mqtt_keys - niagara_keys
+        assert niagara_keys == mqtt_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n  MQTT-only: {mqtt_only}"
+        )
+
+    def test_niagara_dnp3_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        dnp3_keys = set(_dnp3_normalized().to_dict().keys())
+        niagara_only = niagara_keys - dnp3_keys
+        dnp3_only = dnp3_keys - niagara_keys
+        assert niagara_keys == dnp3_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n  DNP3-only: {dnp3_only}"
+        )
+
+    def test_niagara_iec61850_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        iec61850_keys = set(_iec61850_normalized().to_dict().keys())
+        niagara_only = niagara_keys - iec61850_keys
+        iec61850_only = iec61850_keys - niagara_keys
+        assert niagara_keys == iec61850_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n"
+            f"  IEC 61850-only: {iec61850_only}"
+        )
+
+    def test_niagara_knx_top_level_field_sets_identical(self) -> None:
+        niagara_keys = set(_niagara_normalized().to_dict().keys())
+        knx_keys = set(_knx_normalized().to_dict().keys())
+        niagara_only = niagara_keys - knx_keys
+        knx_only = knx_keys - niagara_keys
+        assert niagara_keys == knx_keys, (
+            f"Field set mismatch:\n  Niagara-only: {niagara_only}\n  KNX-only: {knx_only}"
+        )
+
+    def test_all_nine_evidence_field_sets_identical(self) -> None:
         rest_ev = set(_rest_normalized().to_dict()["protocol_evidence"].keys())
         bacnet_ev = set(_bacnet_normalized().to_dict()["protocol_evidence"].keys())
         modbus_ev = set(_modbus_normalized().to_dict()["protocol_evidence"].keys())
@@ -1265,6 +1471,7 @@ class TestCrossProtocolFieldSetParity:
         dnp3_ev = set(_dnp3_normalized().to_dict()["protocol_evidence"].keys())
         iec61850_ev = set(_iec61850_normalized().to_dict()["protocol_evidence"].keys())
         knx_ev = set(_knx_normalized().to_dict()["protocol_evidence"].keys())
+        niagara_ev = set(_niagara_normalized().to_dict()["protocol_evidence"].keys())
         assert (
             rest_ev
             == bacnet_ev
@@ -1274,10 +1481,11 @@ class TestCrossProtocolFieldSetParity:
             == dnp3_ev
             == iec61850_ev
             == knx_ev
+            == niagara_ev
         ), (
             f"Evidence field set mismatch: REST={rest_ev}, BACnet={bacnet_ev}, "
             f"Modbus={modbus_ev}, OPC UA={opcua_ev}, MQTT={mqtt_ev}, DNP3={dnp3_ev}, "
-            f"IEC 61850={iec61850_ev}, KNX={knx_ev}"
+            f"IEC 61850={iec61850_ev}, KNX={knx_ev}, Niagara={niagara_ev}"
         )
 
     def test_all_protocols_have_correct_protocol_field(self) -> None:
@@ -1289,6 +1497,7 @@ class TestCrossProtocolFieldSetParity:
         assert _dnp3_normalized().to_dict()["protocol"] == "dnp3"
         assert _iec61850_normalized().to_dict()["protocol"] == "iec61850"
         assert _knx_normalized().to_dict()["protocol"] == "knx"
+        assert _niagara_normalized().to_dict()["protocol"] == "niagara"
 
     def test_all_protocols_produce_read_action_for_read_operations(self) -> None:
         assert _rest_normalized().to_dict()["action"] == "read"
@@ -1298,6 +1507,7 @@ class TestCrossProtocolFieldSetParity:
         assert _dnp3_normalized().to_dict()["action"] == "read"
         assert _iec61850_normalized().to_dict()["action"] == "read"
         assert _knx_normalized().to_dict()["action"] == "read"
+        assert _niagara_normalized().to_dict()["action"] == "read"
 
 
 # ---------------------------------------------------------------------------
@@ -1378,6 +1588,15 @@ class TestSerializationDeterminism:
         r2 = _knx_normalized()
         assert r1.to_dict() == r2.to_dict()
 
+    def test_niagara_deterministic_across_calls(self) -> None:
+        r = _niagara_normalized()
+        assert r.to_dict() == r.to_dict()
+
+    def test_niagara_deterministic_across_instances(self) -> None:
+        r1 = _niagara_normalized()
+        r2 = _niagara_normalized()
+        assert r1.to_dict() == r2.to_dict()
+
 
 # ---------------------------------------------------------------------------
 # 7. Isolation — no basis_core import, no gateway transport
@@ -1435,6 +1654,7 @@ class TestAdapterIsolation:
             _dnp3_normalized().to_dict()
             _iec61850_normalized().to_dict()
             _knx_normalized().to_dict()
+            _niagara_normalized().to_dict()
         finally:
             socket.getaddrinfo = original_getaddrinfo  # type: ignore[method-assign]
 
@@ -1539,3 +1759,15 @@ class TestProtocolEvidencePresence:
     def test_knx_evidence_path_encodes_group_address(self) -> None:
         d = _knx_normalized().to_dict()
         assert d["protocol_evidence"]["path"] == "group:1/2/3"
+
+    def test_niagara_evidence_protocol_matches_parent(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert d["protocol_evidence"]["protocol"] == d["protocol"]
+
+    def test_niagara_evidence_method_is_operation_name(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert d["protocol_evidence"]["method"] == "READ_POINT"
+
+    def test_niagara_evidence_path_encodes_station_and_point(self) -> None:
+        d = _niagara_normalized().to_dict()
+        assert d["protocol_evidence"]["path"] == "station:station-east/point:AHU1-SupplyTemp"

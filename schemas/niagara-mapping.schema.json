@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://basis-foundation.example/schemas/niagara-mapping.schema.json",
+  "title": "NiagaraMappingConfig",
+  "description": "Configuration schema for the Niagara adapter mapping. Describes how representative Niagara platform operations (component/point/slot/history/alarm/schedule reads, point/slot writes, schedule updates, alarm acknowledgements, action invocations, point commands, overrides/releases, browsing/ORD resolution, and point/alarm/history subscriptions) are normalized into BASIS authorization requests. Routes match on (operation, station); '*' is a wildcard sentinel and station names are matched verbatim. Values, facets, point types, baja types, nav paths, categories, Niagara users, and Niagara roles are never template fields — they remain protocol evidence, and Niagara users/roles are never BASIS identity.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Ordered list of route mappings. Routes are evaluated in order; the first match wins.",
+      "items": {
+        "$ref": "#/$defs/NiagaraRouteMapping"
+      }
+    }
+  },
+  "$defs": {
+    "NiagaraRouteMapping": {
+      "type": "object",
+      "description": "Maps a Niagara operation and station to normalized authorization semantics.",
+      "required": ["operation", "resource_type", "resource_id_template"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable route name. Must be unique across all routes in the config if non-empty.",
+          "default": ""
+        },
+        "operation": {
+          "type": "string",
+          "description": "Niagara operation to match (platform-intent name). Use '*' to match any operation.",
+          "enum": [
+            "READ_COMPONENT",
+            "READ_POINT",
+            "READ_SLOT",
+            "READ_HISTORY",
+            "READ_ALARM",
+            "READ_SCHEDULE",
+            "WRITE_POINT",
+            "WRITE_SLOT",
+            "UPDATE_SCHEDULE",
+            "ACK_ALARM",
+            "INVOKE_ACTION",
+            "COMMAND_POINT",
+            "OVERRIDE_POINT",
+            "RELEASE_OVERRIDE",
+            "BROWSE",
+            "RESOLVE_ORD",
+            "LIST_CHILDREN",
+            "SUBSCRIBE_POINT",
+            "SUBSCRIBE_ALARM",
+            "SUBSCRIBE_HISTORY",
+            "*"
+          ]
+        },
+        "station": {
+          "type": "string",
+          "description": "Station name to match verbatim (e.g. 'station-east'), or '*' to match any. Exact string comparison only — no host resolution, no supervisor topology inference.",
+          "minLength": 1,
+          "default": "*"
+        },
+        "action": {
+          "type": "string",
+          "description": "Normalized action verb. If empty, the default operation→action map is used (READ_*→read, WRITE_POINT/WRITE_SLOT/UPDATE_SCHEDULE→write, ACK_ALARM/INVOKE_ACTION/COMMAND_POINT/OVERRIDE_POINT/RELEASE_OVERRIDE→execute, BROWSE/RESOLVE_ORD/LIST_CHILDREN→browse, SUBSCRIBE_*→subscribe). Niagara reuses the existing canonical action vocabulary — no new verbs were added.",
+          "enum": ["read", "write", "control", "discover", "subscribe", "execute", "browse", ""],
+          "default": ""
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Normalized resource category, e.g. 'niagara_point'.",
+          "minLength": 1,
+          "examples": [
+            "niagara_point",
+            "niagara_component",
+            "niagara_slot",
+            "niagara_ord",
+            "niagara_alarm",
+            "niagara_history",
+            "niagara_schedule",
+            "niagara_station"
+          ]
+        },
+        "resource_id_template": {
+          "type": "string",
+          "description": "Template for the resource ID. May reference {operation}, {station}, {ord}, {component}, {slot}, {point}, {schedule}, {alarm}, {history} using {param} syntax. Values, facets, point types, baja types, nav paths, categories, niagara_user, and niagara_role are not available as template fields.",
+          "minLength": 1,
+          "examples": [
+            "niagara:station:{station}/point:{point}",
+            "niagara:station:{station}/ord:{ord}",
+            "niagara:station:{station}/component:{component}/slot:{slot}",
+            "niagara:station:{station}/history:{history}",
+            "niagara:station:{station}/alarm:{alarm}",
+            "niagara:station:{station}/schedule:{schedule}"
+          ]
+        }
+      }
+    }
+  }
+}

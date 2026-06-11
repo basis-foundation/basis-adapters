@@ -1,0 +1,34 @@
+{
+  "_comment": "Example handoff payload: Niagara adapter normalized request for an ACK_ALARM intent (source operation: acknowledge alarm 'AHU1-HighSupplyTemp' on station 'station-east'). Produced by NiagaraAdapter.normalize() and serialized via NormalizedAuthorizationRequest.to_dict(). Acknowledgement normalizes to 'execute' — an action on the alarm, not a data write. Acknowledgement context is preserved as evidence; the adapter implements no alarm lifecycle, routing, or notification behavior. niagara_user and niagara_role are evidence only — never BASIS identity, never subject_hint. This is a handoff artifact — not a decision, not enforcement, not authentication, and not live Niagara communication.",
+  "protocol": "niagara",
+  "action": "execute",
+  "resource_type": "niagara_alarm",
+  "resource_id": "niagara:station:station-east/alarm:AHU1-HighSupplyTemp",
+  "protocol_evidence": {
+    "protocol": "niagara",
+    "method": "ACK_ALARM",
+    "path": "station:station-east/alarm:AHU1-HighSupplyTemp",
+    "metadata": {
+      "operation": "ACK_ALARM",
+      "station": "station-east",
+      "host": null,
+      "ord": null,
+      "component": null,
+      "slot": null,
+      "point": null,
+      "point_type": null,
+      "value": null,
+      "facet": null,
+      "schedule": null,
+      "alarm": "AHU1-HighSupplyTemp",
+      "history": null,
+      "category": null,
+      "baja_type": null,
+      "nav_path": null,
+      "niagara_user": "operator1",
+      "niagara_role": "operator",
+      "ack_note": "verified by operator on shift"
+    }
+  },
+  "subject_hint": null
+}

@@ -50,7 +50,7 @@ This document defines what must be true before a future `v0.1.0` release of
 
 - [ ] The adapter contract (`docs/contracts/adapter-contract.md`) remains intact:
       fail-closed semantics, evidence preservation, no authorization logic.
-- [ ] REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, and KNX adapters all emit the canonical
+- [ ] REST, BACnet, Modbus, OPC UA, MQTT, DNP3, IEC 61850, KNX, and Niagara adapters all emit the canonical
       normalized request shape (enforced by `tests/test_normalization_contract.py`).
 - [ ] No coupling to `basis-core` or `basis-gateway` has been introduced.
 
