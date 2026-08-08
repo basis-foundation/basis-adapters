@@ -69,14 +69,14 @@ produce a normalization failure.
 ```python
 @dataclass(frozen=True)
 class BacnetOperation:
-    service: str                  # "ReadProperty", "WriteProperty", etc.
-    object_type: str              # "analogInput", "binaryOutput", etc.
-    object_instance: int          # 0–4194302
-    property_identifier: str      # "presentValue", "description", etc.
-    device_id: str | None         # optional — "device-42", None
-    priority: int | None          # optional — write priority 1–16
-    value_present: bool           # True if operation carries a value
-    metadata: dict[str, Any]      # additional protocol-specific fields
+    service: str  # "ReadProperty", "WriteProperty", etc.
+    object_type: str  # "analogInput", "binaryOutput", etc.
+    object_instance: int  # 0–4194302
+    property_identifier: str  # "presentValue", "description", etc.
+    device_id: str | None  # optional — "device-42", None
+    priority: int | None  # optional — write priority 1–16
+    value_present: bool  # True if operation carries a value
+    metadata: dict[str, Any]  # additional protocol-specific fields
 ```
 
 `BacnetOperation` is a frozen dataclass — it cannot be modified after construction.

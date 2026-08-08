@@ -19,7 +19,7 @@ Issues = "https://github.com/basis-foundation/basis-adapters/issues"
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
-    "ruff>=0.4",
+    "ruff==0.16.2",
     "mypy>=1.10",
     "jsonschema>=4.18",
 ]
