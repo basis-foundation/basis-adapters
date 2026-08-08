@@ -81,12 +81,14 @@ If you need to check a file by hand (e.g. a new example before writing tests):
 import json
 from jsonschema import Draft202012Validator
 
+
 def strip_annotations(v):
     if isinstance(v, dict):
         return {k: strip_annotations(x) for k, x in v.items() if not k.startswith("_")}
     if isinstance(v, list):
         return [strip_annotations(x) for x in v]
     return v
+
 
 schema = json.load(open("schemas/rest-mapping.schema.json"))
 instance = strip_annotations(json.load(open("examples/rest/mapping.example.json")))

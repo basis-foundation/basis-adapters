@@ -14,10 +14,10 @@ An adapter accepts a `ProtocolOperation`:
 ```python
 @dataclass(frozen=True)
 class ProtocolOperation:
-    protocol: str          # e.g. "rest", "bacnet"
-    method:   str          # e.g. "GET", "ReadProperty"
-    path:     str          # e.g. "/devices/ahu-1/points/supply-temp"
-    metadata: dict         # protocol-specific extras
+    protocol: str  # e.g. "rest", "bacnet"
+    method: str  # e.g. "GET", "ReadProperty"
+    path: str  # e.g. "/devices/ahu-1/points/supply-temp"
+    metadata: dict  # protocol-specific extras
 ```
 
 The `ProtocolOperation` represents an operation as received from the wire,
@@ -33,7 +33,7 @@ An adapter returns an `AdapterResult`:
 @dataclass(frozen=True)
 class AdapterResult:
     request: NormalizedAuthorizationRequest | None
-    error:   str | None
+    error: str | None
     success: bool
 ```
 
