@@ -5,11 +5,11 @@ Protocol adapters for the BASIS ecosystem.
 Adapters normalize protocol-specific operations into BASIS authorization semantics.
 They do not evaluate policy. They do not enforce decisions. They translate.
 
-> **Status: v0.1.0 release candidate.** The initial planned adapter set (nine
+> **Status: v0.1.0 released.** The initial planned adapter set (nine
 > adapters) is complete and normalization-complete. Pure normalization library —
 > no live protocol communication, no network I/O. Not audited, no production
 > claims. See [docs/release-readiness.md](docs/release-readiness.md) for the
-> release gate.
+> release gate this release satisfied.
 
 ---
 
@@ -104,6 +104,16 @@ work, if any, falls into three categories: optional protocol expansion (one at
 a time, conforming to the canonical normalized request shape — see
 [CONTRIBUTING.md](CONTRIBUTING.md)), runtime integrations (a separate decision,
 outside this library's scope), and release hardening.
+
+**Operation-aware handoff alignment is planned, not implemented.** A future,
+not-yet-implemented, authenticated operation-producer runtime may consume this
+library's output to construct a `basis-schemas` `adapter-evidence-reference`
+and submit to `basis-gateway`'s operation-aware path. No such runtime exists
+yet, `basis-adapters` still does not authenticate callers, establish producer
+trust, call `basis-gateway`, call `basis-core`, or produce execution
+evidence, and `v0.1.0` remains the current released behavior. See
+[docs/operation-aware-handoff-alignment-plan.md](docs/operation-aware-handoff-alignment-plan.md)
+for the discovery-and-assessment plan.
 
 ## What Adapters Do
 
@@ -210,7 +220,8 @@ and on pushes to `main`. CI type-checks `src` only — the configured gate.
 | Examples guide | [docs/examples.md](docs/examples.md) |
 | Schema/example validation | [docs/schema-validation.md](docs/schema-validation.md) |
 | Development workflow | [docs/development-workflow.md](docs/development-workflow.md) |
-| Release readiness (v0.1.0 gate) | [docs/release-readiness.md](docs/release-readiness.md) |
+| Release readiness (historical v0.1.0 release-readiness record) | [docs/release-readiness.md](docs/release-readiness.md) |
+| Operation-aware handoff alignment plan (planning only) | [docs/operation-aware-handoff-alignment-plan.md](docs/operation-aware-handoff-alignment-plan.md) |
 | Implementation history (Phases 1–14) | [docs/implementation/](docs/implementation/) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Security policy | [SECURITY.md](SECURITY.md) |
