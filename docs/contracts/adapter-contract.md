@@ -167,6 +167,22 @@ all adapters and basis-gateway. Adapters diverge on input; they converge on outp
 
 ---
 
+## Adapter Evidence Construction (Additive, Separate Contract)
+
+`basis_adapters.evidence.construct_adapter_evidence()` is a separate, additive
+helper that consumes a successful `AdapterResult` — it does not change
+`normalize()`, `AdapterResult`, or anything in this contract. It constructs
+the governed `basis-adapter-evidence-v1` evidence material from the
+normalized request, canonicalizes it under RFC 8785, and computes its
+digest, per `basis-architecture`'s ADR-0007. It does not mint
+`reference_id`, select `adapter_source`, assign `redaction_classification`,
+create request or correlation identifiers, call `basis-gateway`,
+authenticate a producer, or assemble a final `adapter-evidence-reference` —
+those remain operation-producer-runtime responsibilities. Digest equality
+proves only byte-correspondence with declared canonical input; it does not
+prove truthfulness, authorization, or execution. See
+[docs/public-api.md](../public-api.md#adapter-evidence-construction-basis_adaptersevidence).
+
 ## Summary Table
 
 | Responsibility              | Adapter | Gateway | basis-core |

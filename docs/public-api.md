@@ -30,6 +30,11 @@ detail and may change without notice.
 | `AdapterError` | Base exception for all adapter errors. |
 | `InvalidMappingError` | Mapping configuration is structurally invalid; raised at config validation time (fail fast). |
 | `UnknownRouteError` | Operation matches no configured route; adapters fail closed. |
+| `EvidenceConstructionError` and its five subclasses (`UnsupportedEvidenceProtocolError`, `UnexpectedEvidenceFieldError`, `ProhibitedEvidenceValueError`, `EvidenceCanonicalizationError`, `UnsupportedDigestAlgorithmError`) | Adapter-evidence construction failures, raised by `basis_adapters.evidence.construct_adapter_evidence()`. See [Adapter Evidence Construction](#adapter-evidence-construction-basis_adaptersevidence) below. |
+
+All exception classes, including the evidence-construction ones, are defined
+in `src/basis_adapters/errors.py` — `basis_adapters.evidence` imports them
+from there rather than defining its own hierarchy.
 
 ## REST (`basis_adapters.rest`)
 
@@ -144,6 +149,120 @@ detail and may change without notice.
 | `VALID_NIAGARA_ACTIONS` | Normalized action verbs accepted for Niagara routes (shared set plus `execute` and `browse`, both pre-existing). |
 | `VALID_NIAGARA_OPERATIONS` | Allowed Niagara operation names (`READ_COMPONENT`, `READ_POINT`, `READ_SLOT`, `READ_HISTORY`, `READ_ALARM`, `READ_SCHEDULE`, `WRITE_POINT`, `WRITE_SLOT`, `UPDATE_SCHEDULE`, `ACK_ALARM`, `INVOKE_ACTION`, `COMMAND_POINT`, `OVERRIDE_POINT`, `RELEASE_OVERRIDE`, `BROWSE`, `RESOLVE_ORD`, `LIST_CHILDREN`, `SUBSCRIBE_POINT`, `SUBSCRIBE_ALARM`, `SUBSCRIBE_HISTORY`). |
 | `VALID_NIAGARA_TEMPLATE_FIELDS` | Allowed fields in Niagara resource-ID templates. |
+
+## Adapter Evidence Construction (`basis_adapters.evidence`)
+
+> **Scope.** `basis-architecture`'s ADR-0007 ("Adapter Evidence
+> Construction") has been formally accepted. This surface implements only
+> the `basis-adapters`-owned portion of that accepted architecture: it
+> constructs the governed `basis-adapter-evidence-v1` evidence material,
+> canonicalizes it under RFC 8785, and computes its digest. It does **not**
+> mint `reference_id`, does **not** select `adapter_source`, does **not**
+> assign `redaction_classification`, does **not** create request or
+> correlation identifiers, does **not** call `basis-gateway`, does **not**
+> authenticate a producer, and does **not** assemble a final
+> `adapter-evidence-reference`. Those remain future operation-producer-runtime
+> responsibilities. Digest equality proves only byte-correspondence with
+> declared canonical input under the profile the material itself declares —
+> it does not prove truthfulness, producer authenticity, authorization, or
+> execution. The operation-producer runtime itself remains unimplemented;
+> nothing in this section claims operation-aware adapter integration is
+> complete or that the ecosystem can retrieve or verify persisted evidence.
+
+### Constants
+
+| Name | Purpose |
+|---|---|
+| `EVIDENCE_PROFILE` | Fixed literal `"basis-adapter-evidence-v1"` — the governed evidence-material profile identity, carried inside the digested material itself. |
+| `CANONICALIZATION_PROFILE` | Fixed literal `"rfc8785"` — the governed canonicalization-profile identity, carried inside the digested material itself. |
+| `DIGEST_ALGORITHM_SHA256` | `"sha-256"` — the only digest algorithm this module supports today. |
+
+### Models
+
+| Name | Kind | Purpose |
+|---|---|
+| `AdapterEvidenceMaterial` | frozen dataclass | The governed `basis-adapter-evidence-v1` evidence material: `evidence_profile`, `canonicalization_profile`, `protocol`, `action`, `resource_type`, `resource_id`, and a governed `protocol_evidence` projection (`protocol`, `method`, `path`, and only the approved `metadata` keys for the protocol). Has `to_dict()`. |
+| `EvidenceDigest` | frozen dataclass | An `algorithm`/`value` pair matching the published `evidence-digest` shape. Has `to_dict()`. |
+| `ConstructedAdapterEvidence` | frozen dataclass | The result of `construct_adapter_evidence()`: `material`, `canonical_bytes` (the exact RFC 8785 bytes digested), and `digest`. |
+
+### Functions
+
+| Name | Purpose |
+|---|---|
+| `construct_adapter_evidence(result, *, digest_algorithm="sha-256")` | Pure, deterministic, side-effect-free. Accepts a successful `AdapterResult` from any of the nine adapters and returns a `ConstructedAdapterEvidence`. Raises an `EvidenceConstructionError` subclass on any construction, projection, canonicalization, or digest failure — see Errors below. |
+
+### Errors
+
+Defined in `src/basis_adapters/errors.py` (alongside the rest of the
+package's exception hierarchy), imported into `basis_adapters.evidence` and
+re-exported from the package root.
+
+| Name | Purpose |
+|---|---|
+| `EvidenceConstructionError` | Base exception for all adapter-evidence construction failures. Subclass of `AdapterError`. |
+| `UnsupportedEvidenceProtocolError` | The request's protocol has no governed metadata projection. |
+| `UnexpectedEvidenceFieldError` | `protocol_evidence.metadata` contains a key outside the approved projection list for the protocol. |
+| `ProhibitedEvidenceValueError` | A prohibited field name (credential-, token-, or secret-shaped) is present anywhere in the material being constructed. |
+| `EvidenceCanonicalizationError` | The material cannot be canonicalized under RFC 8785. Wraps the `rfc8785` dependency's own exception. |
+| `UnsupportedDigestAlgorithmError` | A caller requested a digest algorithm other than `"sha-256"`. Never silently falls back to SHA-256. |
+
+### Governed per-protocol metadata projection
+
+For each protocol, only the approved `protocol_evidence.metadata` keys
+below are projected into digested evidence material; every other key present
+causes construction to fail. This table reproduces exactly the per-protocol
+metadata fields already documented in
+[docs/contracts/normalization-contract.md](contracts/normalization-contract.md).
+REST is the deliberate exception: because its `metadata` shape is
+open-ended, its projection is always the empty object, regardless of what
+the source `ProtocolOperation.metadata` contains — this is a known,
+documented limitation of the `basis-adapter-evidence-v1` profile, not a
+defect.
+
+**The `basis-adapter-evidence-v1` REST projection intentionally excludes
+all REST metadata.** The original normalized request continues to preserve
+complete REST protocol evidence, but REST metadata does not contribute to
+the v1 adapter-evidence digest. This is not redaction — nothing about the
+original `NormalizedAuthorizationRequest` or its `protocol_evidence` is
+removed, modified, or hidden; `RestAdapter.normalize()` output is unaffected
+by this module, exactly as `docs/compatibility.md` requires. It is a
+narrower, separate statement about what this one profile version digests:
+two REST results whose only difference is metadata content produce
+byte-identical evidence material, canonical bytes, and digests, even though
+each source request's own `protocol_evidence.metadata` remains complete and
+distinct.
+
+| Protocol | Approved keys |
+|---|---|
+| `rest` | *(none — always projects an empty `metadata` object)* |
+| `bacnet` | `service`, `object_type`, `object_instance`, `property_identifier`, `device_id`, `priority`, `value_present` |
+| `modbus` | `function`, `unit_id`, `address`, `quantity`, `value_present`, `register_type`, `source_address`, `transaction_id` |
+| `opcua` | `service`, `node_id`, `attribute_id`, `method_id`, `namespace_index`, `identifier`, `identifier_type`, `browse_name`, `parent_node_id`, `subscription_id`, `monitored_item_id`, `value_present`, `endpoint_url`, `session_id` |
+| `mqtt` | `operation`, `topic`, `client_id`, `qos`, `retain`, `payload_type`, `protocol_version` |
+| `dnp3` | `operation`, `source_address`, `destination_address`, `outstation_id`, `master_id`, `object_group`, `variation`, `point_index`, `point_type`, `function_code`, `qualifier`, `control_code`, `control_model`, `event_class`, `value` |
+| `iec61850` | `operation`, `ied_name`, `logical_device`, `logical_node`, `data_object`, `data_attribute`, `functional_constraint`, `dataset`, `report_control_block`, `goose_control_block`, `sampled_values_control_block`, `control_model`, `origin`, `cause`, `quality`, `timestamp`, `value` |
+| `knx` | `operation`, `group_address`, `individual_address`, `device_address`, `communication_object`, `datapoint_type`, `payload_type`, `value`, `priority`, `area`, `line`, `device` |
+| `niagara` | `operation`, `station`, `host`, `ord`, `component`, `slot`, `point`, `point_type`, `value`, `facet`, `schedule`, `alarm`, `history`, `category`, `baja_type`, `nav_path`, `niagara_user`, `niagara_role` |
+
+`subject_hint` is excluded from digested evidence material entirely, for
+every protocol — the identity boundary this exclusion protects is documented
+in `docs/contracts/normalization-contract.md`.
+
+### Example
+
+```python
+from basis_adapters.evidence import construct_adapter_evidence
+
+result = adapter.normalize(operation)
+if not result.success:
+    raise SystemExit(f"normalization failed: {result.error}")
+
+constructed = construct_adapter_evidence(result)
+print(constructed.digest.algorithm, constructed.digest.value)
+# A future operation-producer runtime, not this library, mints reference_id,
+# selects adapter_source, assigns redaction_classification, and assembles
+# the final AdapterEvidenceReference from constructed.material/.digest.
+```
 
 ## Serialization Contract
 

@@ -37,6 +37,11 @@ refactor.
   enum values where downstream tolerance is verified, new mapping capabilities that
   leave existing configs valid.
 - New adapters, new examples, new docs.
+- New, self-contained modules that do not alter any existing model's fields
+  or behavior — for example, `basis_adapters.evidence` (adapter evidence
+  material construction, canonicalization, and digesting; see
+  [docs/public-api.md](public-api.md#adapter-evidence-construction-basis_adaptersevidence)),
+  which callers who do not import it will never observe.
 
 ## Rules for Protocol Adapters
 
@@ -50,6 +55,25 @@ refactor.
 - All adapters participate in the cross-protocol contract tests
   (`tests/test_normalization_contract.py`); a new adapter is not complete until it
   does.
+
+## Runtime Dependencies
+
+`basis-adapters` declared `dependencies = []` (zero runtime dependencies)
+through `v0.1.0`. `pyproject.toml` now declares one: `rfc8785==0.1.4`, a
+pure-Python, standards-conforming implementation of RFC 8785 (the JSON
+Canonicalization Scheme), used exclusively by `src/basis_adapters/evidence.py`
+to canonicalize adapter evidence material deterministically before digesting
+it. It is not encryption, not signing, not producer authentication, not
+tamper-proofing, and not execution proof — see
+[docs/public-api.md](public-api.md#adapter-evidence-construction-basis_adaptersevidence)
+for what the evidence-construction surface does and does not prove. Adding
+this first dependency is treated as **additive**: it does not change any
+existing adapter's normalization output, any existing public field, or any
+existing behavior for callers that do not import `basis_adapters.evidence`.
+Any historical documentation stating or implying `dependencies = []`,
+"no runtime dependencies", or a standard-library-only implementation predates
+this change and should be read as describing the state as of `v0.1.0`, not
+the current `pyproject.toml`.
 
 ## Process
 

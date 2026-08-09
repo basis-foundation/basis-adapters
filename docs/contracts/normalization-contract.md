@@ -445,6 +445,32 @@ Example handoff payloads are in `examples/handoff/`.
 
 ---
 
+## Relationship to Adapter Evidence Construction
+
+The per-protocol `protocol_evidence.metadata` fields documented above (§
+"Protocol-Specific Evidence") are also the source table for
+`basis_adapters.evidence`'s governed, closed per-protocol metadata
+projection (`basis-adapter-evidence-v1`, per `basis-architecture`'s
+ADR-0007) — see
+[docs/public-api.md](../public-api.md#adapter-evidence-construction-basis_adaptersevidence).
+That projection is a **separate, narrower artifact**: it governs only what
+subset of `protocol_evidence.metadata` may be projected into digested
+evidence material, never what `normalize()` itself returns.
+`NormalizedAuthorizationRequest.protocol_evidence` remains exactly what this
+document already defines — complete, verbatim, and unaffected by evidence
+construction. `basis_adapters.evidence` does not construct a final
+`adapter-evidence-reference`; it constructs only the evidence material and
+its digest.
+
+For REST specifically: the `basis-adapter-evidence-v1` REST projection
+intentionally excludes all REST metadata. The original normalized request
+continues to preserve complete REST protocol evidence — REST's `metadata`
+(§ "How REST Maps into the Canonical Shape") is untouched by
+`basis_adapters.evidence` and remains exactly what `RestAdapter.normalize()`
+returns — but REST metadata does not contribute to the v1 adapter-evidence
+digest. This is not redaction of the normalized request; it is a statement
+about which fields one evidence-material profile version digests.
+
 ## Relationship to Other Contracts
 
 - **`docs/contracts/adapter-contract.md`** — the per-adapter behavioral

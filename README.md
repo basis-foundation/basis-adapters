@@ -105,15 +105,34 @@ a time, conforming to the canonical normalized request shape — see
 [CONTRIBUTING.md](CONTRIBUTING.md)), runtime integrations (a separate decision,
 outside this library's scope), and release hardening.
 
-**Operation-aware handoff alignment is planned, not implemented.** A future,
-not-yet-implemented, authenticated operation-producer runtime may consume this
-library's output to construct a `basis-schemas` `adapter-evidence-reference`
-and submit to `basis-gateway`'s operation-aware path. No such runtime exists
-yet, `basis-adapters` still does not authenticate callers, establish producer
-trust, call `basis-gateway`, call `basis-core`, or produce execution
-evidence, and `v0.1.0` remains the current released behavior. See
+**The full operation-aware handoff remains planned and unimplemented.** A
+future, not-yet-implemented, authenticated operation-producer runtime may
+consume this library's output to construct a `basis-schemas`
+`adapter-evidence-reference` and submit to `basis-gateway`'s operation-aware
+path. No such runtime exists yet, `basis-adapters` still does not
+authenticate callers, establish producer trust, call `basis-gateway`, call
+`basis-core`, produce execution evidence, or persist or verify anything, and
+`v0.1.0` remains the current released behavior. See
 [docs/operation-aware-handoff-alignment-plan.md](docs/operation-aware-handoff-alignment-plan.md)
 for the discovery-and-assessment plan.
+
+**Adapter evidence material construction follows `basis-architecture`'s
+accepted ADR-0007 (Stage 1).** `basis-architecture`'s
+[ADR-0007](https://github.com/basis-foundation/basis-architecture/blob/main/docs/adr/0007-adapter-evidence-construction.md)
+has been formally accepted; `basis_adapters.evidence` implements the
+adapter-owned portion of that accepted architecture. It constructs the
+governed `basis-adapter-evidence-v1` evidence material from a successful
+normalization result, canonicalizes it under RFC 8785, and computes a
+deterministic digest — a pure, side-effect-free helper with no network,
+storage, or clock access. It does **not** mint `reference_id`, select
+`adapter_source`, assign `redaction_classification`, assemble a final
+`adapter-evidence-reference`, authenticate a producer, or call
+`basis-gateway` or `basis-core` — those remain operation-producer-runtime
+responsibilities, and no operation-producer runtime exists in this
+repository. Digest equality proves only byte-correspondence with declared
+canonical input; it does not prove truthfulness, producer authenticity,
+authorization, or execution. See
+[docs/public-api.md](docs/public-api.md#adapter-evidence-construction-basis_adaptersevidence).
 
 ## What Adapters Do
 
