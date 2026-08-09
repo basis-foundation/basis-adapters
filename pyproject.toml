@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "basis-adapters"
-version = "0.1.0"
+version = "0.2.0"
 description = "Protocol adapters that normalize operations into BASIS authorization semantics"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,6 +24,7 @@ dev = [
     "ruff==0.16.2",
     "mypy>=1.10",
     "jsonschema>=4.18",
+    "build>=1.2.0,<2.0",
 ]
 
 [tool.hatch.build.targets.wheel]

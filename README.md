@@ -5,11 +5,17 @@ Protocol adapters for the BASIS ecosystem.
 Adapters normalize protocol-specific operations into BASIS authorization semantics.
 They do not evaluate policy. They do not enforce decisions. They translate.
 
-> **Status: v0.1.0 released.** The initial planned adapter set (nine
-> adapters) is complete and normalization-complete. Pure normalization library —
-> no live protocol communication, no network I/O. Not audited, no production
-> claims. See [docs/release-readiness.md](docs/release-readiness.md) for the
-> release gate this release satisfied.
+> **Status: v0.2.0 release candidate.** The initial nine-adapter normalization
+> surface remains complete. This release adds deterministic adapter-evidence
+> material construction, RFC 8785 canonicalization, and SHA-256 digest
+> generation under the architecture adopted by ADR-0007. The full
+> operation-aware handoff, operation-producer runtime, producer
+> authentication, final evidence-reference assembly, protocol execution, and
+> execution evidence remain unimplemented. Not audited; no production
+> claims. See [docs/release-readiness-v0.2.0.md](docs/release-readiness-v0.2.0.md)
+> for the release gate this release candidate must satisfy, and
+> [docs/release-readiness.md](docs/release-readiness.md) for the historical
+> `v0.1.0` release record.
 
 ---
 
@@ -111,8 +117,8 @@ consume this library's output to construct a `basis-schemas`
 `adapter-evidence-reference` and submit to `basis-gateway`'s operation-aware
 path. No such runtime exists yet, `basis-adapters` still does not
 authenticate callers, establish producer trust, call `basis-gateway`, call
-`basis-core`, produce execution evidence, or persist or verify anything, and
-`v0.1.0` remains the current released behavior. See
+`basis-core`, produce execution evidence, or persist or verify anything.
+Existing adapter normalization behavior is unchanged from `v0.1.0`. See
 [docs/operation-aware-handoff-alignment-plan.md](docs/operation-aware-handoff-alignment-plan.md)
 for the discovery-and-assessment plan.
 
@@ -239,6 +245,7 @@ and on pushes to `main`. CI type-checks `src` only — the configured gate.
 | Examples guide | [docs/examples.md](docs/examples.md) |
 | Schema/example validation | [docs/schema-validation.md](docs/schema-validation.md) |
 | Development workflow | [docs/development-workflow.md](docs/development-workflow.md) |
+| Release readiness (v0.2.0 release-readiness record) | [docs/release-readiness-v0.2.0.md](docs/release-readiness-v0.2.0.md) |
 | Release readiness (historical v0.1.0 release-readiness record) | [docs/release-readiness.md](docs/release-readiness.md) |
 | Operation-aware handoff alignment plan (planning only) | [docs/operation-aware-handoff-alignment-plan.md](docs/operation-aware-handoff-alignment-plan.md) |
 | Implementation history (Phases 1–14) | [docs/implementation/](docs/implementation/) |
