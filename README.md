@@ -5,15 +5,17 @@ Protocol adapters for the BASIS ecosystem.
 Adapters normalize protocol-specific operations into BASIS authorization semantics.
 They do not evaluate policy. They do not enforce decisions. They translate.
 
-> **Status: v0.2.0 release candidate.** The initial nine-adapter normalization
+> **Status: v0.2.0 released.** The initial nine-adapter normalization
 > surface remains complete. This release adds deterministic adapter-evidence
 > material construction, RFC 8785 canonicalization, and SHA-256 digest
 > generation under the architecture adopted by ADR-0007. The full
 > operation-aware handoff, operation-producer runtime, producer
 > authentication, final evidence-reference assembly, protocol execution, and
 > execution evidence remain unimplemented. Not audited; no production
-> claims. See [docs/release-readiness-v0.2.0.md](docs/release-readiness-v0.2.0.md)
-> for the release gate this release candidate must satisfy, and
+> claims. See the
+> [v0.2.0 release](https://github.com/basis-foundation/basis-adapters/releases/tag/v0.2.0),
+> [docs/release-readiness-v0.2.0.md](docs/release-readiness-v0.2.0.md)
+> for the release gate this release satisfied, and
 > [docs/release-readiness.md](docs/release-readiness.md) for the historical
 > `v0.1.0` release record.
 
