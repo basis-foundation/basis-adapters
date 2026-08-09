@@ -12,6 +12,29 @@ operation-aware handoff, per
 (§13, Stage 2), which names this exact document as the next decision gate in
 the ecosystem's implementation sequence.
 
+**Status update (post-ADR-0007).** The two architecture decisions this plan's
+§5 identified as blocking (`evidence_digest` canonicalization; `reference_id`
+minting ownership) have since been resolved by `basis-architecture`'s
+[ADR-0007](https://github.com/basis-foundation/basis-architecture/blob/main/docs/adr/0007-adapter-evidence-construction.md)
+and its companion
+[adapter evidence construction semantics document](https://github.com/basis-foundation/basis-architecture/blob/main/docs/architecture/adapter-evidence-construction-semantics.md).
+Per that decision, `basis-adapters` now implements the evidence-material
+construction, RFC 8785 canonicalization, and digest-computation helper this
+plan's §12 (PR 3) described as blocked — see `src/basis_adapters/evidence.py`
+and `docs/public-api.md`. This addition does **not** answer this plan's
+governing question in full: `reference_id` minting, `adapter_source`
+selection, `redaction_classification` assignment, and final
+`AdapterEvidenceReference` assembly remain operation-producer-runtime
+responsibilities this repository does not perform. The rest of this
+document — including its §5 field-by-field assessment and its now-superseded
+"architecture decision needed" conclusions for `evidence_digest` and
+`reference_id` — is left unmodified below as a historical record of the
+assessment that prompted the architecture decision, per this repository's own
+`docs/compatibility.md` documentation-change discipline. This is also the
+point at which `basis-adapters` gained its first runtime dependency
+(`rfc8785`) — see the correction to the "zero runtime dependencies" claim in
+§1 below.
+
 ## Governing Question
 
 > Can the current `basis-adapters` public surface produce the normalized
@@ -74,9 +97,14 @@ It also relies on, without restating, `docs/contracts/normalization-contract.md`
   toward one;
 - does not invoke `basis-gateway` — normalization is an in-process, pure
   transformation with no network I/O;
-- does not invoke `basis-core` — it has zero runtime dependencies
-  (`pyproject.toml` declares `dependencies = []`) and no import of any
-  `basis_core` module;
+- does not invoke `basis-core` — it had zero runtime dependencies at the
+  time this assessment was written (`pyproject.toml` declared
+  `dependencies = []`) and has no import of any `basis_core` module; per the
+  status update above, `basis-adapters` has since gained its first runtime
+  dependency (`rfc8785`, for RFC 8785 canonicalization inside
+  `src/basis_adapters/evidence.py`) — a standards-conforming deterministic
+  JSON serialization library, not a network client, not `basis_core`, and
+  not `basis_gateway`;
 - does not authorize — it produces the input to an authorization decision,
   never the decision itself;
 - does not execute OT operations — "no sockets, no packet parsing, no
