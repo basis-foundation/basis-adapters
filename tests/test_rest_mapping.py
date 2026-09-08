@@ -169,7 +169,12 @@ class TestActionResolution:
         action = point_config.resolve_action(route, "PATCH")
         assert action == "write"
 
-    def test_options_defaults_to_discover(self) -> None:
+    def test_options_defaults_to_browse(self) -> None:
+        # OPTIONS's default (implicit) action is "browse" per the canonical
+        # action vocabulary — matching OPC UA Browse / Niagara BROWSE
+        # defaults. Explicit `action_map={"OPTIONS": "discover"}` remains a
+        # fully supported compatibility alias (see
+        # test_explicit_discover_action_still_honored).
         config = RestMappingConfig(
             routes=[
                 RouteMapping(
@@ -182,7 +187,46 @@ class TestActionResolution:
         )
         route, _ = config.match("OPTIONS", "/devices")
         action = config.resolve_action(route, "OPTIONS")
+        assert action == "browse"
+
+    def test_explicit_discover_action_still_honored(self) -> None:
+        # "discover" is a compatibility alias: explicit action_map entries
+        # that set it continue to work verbatim even though the implicit
+        # OPTIONS default changed.
+        config = RestMappingConfig(
+            routes=[
+                RouteMapping(
+                    methods=["OPTIONS"],
+                    path_pattern="/devices",
+                    resource_type="device",
+                    resource_id_template="*",
+                    action_map={"OPTIONS": "discover"},
+                )
+            ]
+        )
+        route, _ = config.match("OPTIONS", "/devices")
+        action = config.resolve_action(route, "OPTIONS")
         assert action == "discover"
+
+    def test_explicit_browse_action_map_entry_is_valid(self) -> None:
+        # "browse" is a normalized action verb in its own right (not just an
+        # implicit default): an explicit action_map entry naming it must be
+        # accepted by validation and honored verbatim, e.g. for a route that
+        # wants "browse" on a method other than OPTIONS.
+        config = RestMappingConfig(
+            routes=[
+                RouteMapping(
+                    methods=["GET"],
+                    path_pattern="/devices/tree",
+                    resource_type="device",
+                    resource_id_template="*",
+                    action_map={"GET": "browse"},
+                )
+            ]
+        )
+        route, _ = config.match("GET", "/devices/tree")
+        action = config.resolve_action(route, "GET")
+        assert action == "browse"
 
 
 # ---------------------------------------------------------------------------

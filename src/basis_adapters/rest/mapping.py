@@ -35,8 +35,26 @@ from typing import Any
 
 from basis_adapters.errors import InvalidMappingError, UnknownRouteError
 
-# Recognized normalized action verbs.
+# Recognized normalized action verbs — the shared base vocabulary imported
+# by every adapter's mapping module. Do not add "execute" or "browse" here:
+# several adapters (Modbus, MQTT, KNX) intentionally reuse this base set
+# unchanged (see e.g. knx/mapping.py's `VALID_KNX_ACTIONS = VALID_ACTIONS`),
+# and widening it here would silently widen what they accept too. Adapters
+# that need "execute" and/or "browse" define their own local extension via
+# `VALID_ACTIONS | frozenset({...})` (see dnp3/mapping.py, niagara/mapping.py,
+# iec61850/mapping.py, opcua/mapping.py) — REST and BACnet follow the same
+# pattern below via `_REST_VALID_ACTIONS` / `_BACNET_VALID_ACTIONS`.
 VALID_ACTIONS = frozenset({"read", "write", "control", "discover", "subscribe"})
+
+# Action verbs accepted for REST routes. Includes "browse", which is already
+# part of the canonical action vocabulary (added additively in Phase 7 for
+# OPC UA — see schemas/normalized-authorization-request.schema.json and
+# docs/contracts/normalization-contract.md), not a new addition here. Without
+# this local extension, an explicit `action_map={"OPTIONS": "browse"}` (or
+# any other method) would be rejected at validation time even though
+# "browse" is the REST OPTIONS implicit default and a fully accepted action
+# value everywhere else in the canonical vocabulary.
+_REST_VALID_ACTIONS = VALID_ACTIONS | frozenset({"browse"})
 
 # Recognized HTTP methods plus the wildcard sentinel.
 # Non-standard methods are rejected to prevent silent misconfiguration.
@@ -45,10 +63,19 @@ VALID_HTTP_METHODS = frozenset(
 )
 
 # HTTP methods that default to a normalized action when no explicit action_map entry exists.
+#
+# OPTIONS defaults to "browse" (not "discover") to conform with the
+# canonical action vocabulary: address-space/capability enumeration across
+# the newer protocol adapters (OPC UA Browse, Niagara BROWSE/RESOLVE_ORD/
+# LIST_CHILDREN) normalizes to "browse". "discover" remains a fully
+# accepted, valid action value — routes may still set
+# `action_map={"OPTIONS": "discover"}` explicitly and it is honored
+# verbatim. Only the *implicit default* (no explicit action_map entry)
+# changes; explicit legacy mappings are unaffected.
 _DEFAULT_ACTION_MAP: dict[str, str] = {
     "GET": "read",
     "HEAD": "read",
-    "OPTIONS": "discover",
+    "OPTIONS": "browse",
     "POST": "write",
     "PUT": "write",
     "PATCH": "write",
@@ -182,10 +209,10 @@ class RouteMapping:
                 raise InvalidMappingError(
                     f"Route '{label}': action for method '{method}' must not be empty"
                 )
-            if action not in VALID_ACTIONS:
+            if action not in _REST_VALID_ACTIONS:
                 raise InvalidMappingError(
                     f"Route '{label}': invalid action '{action}' for method '{method}'. "
-                    f"Valid actions: {sorted(VALID_ACTIONS)}"
+                    f"Valid actions: {sorted(_REST_VALID_ACTIONS)}"
                 )
 
 

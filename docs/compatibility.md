@@ -43,6 +43,33 @@ refactor.
   [docs/public-api.md](public-api.md#adapter-evidence-construction-basis_adaptersevidence)),
   which callers who do not import it will never observe.
 
+## Default Action Vocabulary Conformance (BACnet `CommandValue`, REST `OPTIONS`)
+
+`basis-adapters`' BACnet and REST adapters predate the later protocol
+adapters (DNP3, IEC 61850, KNX, Niagara, OPC UA), which converged on
+`"execute"` for command/operational primitives and `"browse"` for
+address-space/capability enumeration. BACnet's `CommandValue` and REST's
+`OPTIONS` still defaulted to the earlier `"control"` and `"discover"`
+terms. Their **implicit defaults** (used only when a route has no explicit
+`action` / `action_map` entry) now align with the rest of the ecosystem:
+
+- BACnet `CommandValue` with no explicit route `action` → `"execute"`
+  (was `"control"`).
+- REST `OPTIONS` with no explicit `action_map` entry → `"browse"`
+  (was `"discover"`).
+
+This is a behavior change for configs that relied on the *implicit*
+default and did not set an explicit action — call it out per the Process
+section below if you are consuming an unpinned default for these two
+cases. It is not a removal: `"control"` and `"discover"` remain fully
+valid, accepted `action` values everywhere they were previously accepted.
+Any route (or `action_map` entry) that explicitly names `"control"` or
+`"discover"` continues to produce exactly that value, unchanged — the
+action model was not expanded (both `"execute"` and `"browse"` already
+existed in the canonical vocabulary since Phase 7) and no existing
+explicit mapping's behavior changed. Only the two implicit defaults named
+above moved; no other adapter's default action mapping was touched.
+
 ## Rules for Protocol Adapters
 
 - Protocol adapters must **not introduce protocol-specific top-level output

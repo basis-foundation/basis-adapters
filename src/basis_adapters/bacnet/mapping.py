@@ -38,11 +38,24 @@ from typing import Any
 from basis_adapters.errors import InvalidMappingError, UnknownRouteError
 from basis_adapters.models import ProtocolOperation
 
-# Recognized normalized action verbs — shared constant.
+# Recognized normalized action verbs — shared base constant.
 from basis_adapters.rest.mapping import VALID_ACTIONS
 
 # Recognized BACnet service primitives supported by this adapter.
 VALID_BACNET_SERVICES = frozenset({"ReadProperty", "WriteProperty", "SubscribeCOV", "CommandValue"})
+
+# Action verbs accepted for BACnet routes. Includes "execute", which is
+# already part of the canonical action vocabulary (added additively in
+# Phase 7 for OPC UA — see schemas/normalized-authorization-request.schema.json
+# and docs/contracts/normalization-contract.md), not a new addition here.
+# Without this local extension, an explicit `"action": "execute"` route
+# would be rejected at validation time even though "execute" is the
+# CommandValue implicit default and a fully accepted action value
+# everywhere else in the canonical vocabulary. Follows the same
+# local-extension pattern used by dnp3/niagara/iec61850/opcua mapping
+# modules rather than widening the shared VALID_ACTIONS base (which other
+# adapters such as Modbus, MQTT, and KNX intentionally reuse unchanged).
+_BACNET_VALID_ACTIONS = VALID_ACTIONS | frozenset({"execute"})
 
 # Fields that may be referenced in resource_id_template.
 VALID_BACNET_TEMPLATE_FIELDS = frozenset(
@@ -50,11 +63,20 @@ VALID_BACNET_TEMPLATE_FIELDS = frozenset(
 )
 
 # Default action mapping from BACnet service to normalized action verb.
+#
+# CommandValue defaults to "execute" (not "control") to conform with the
+# canonical action vocabulary: command/operational primitives across the
+# newer protocol adapters (DNP3 SELECT/OPERATE/DIRECT_OPERATE, IEC 61850
+# SELECT/OPERATE/DIRECT_OPERATE, Niagara COMMAND_POINT/OVERRIDE_POINT) all
+# normalize to "execute". "control" remains a fully accepted, valid action
+# value — routes may still set `"action": "control"` explicitly and it is
+# honored verbatim. Only the *implicit default* (no explicit route action)
+# changes; explicit legacy mappings are unaffected.
 _DEFAULT_SERVICE_ACTION_MAP: dict[str, str] = {
     "ReadProperty": "read",
     "WriteProperty": "write",
     "SubscribeCOV": "subscribe",
-    "CommandValue": "control",
+    "CommandValue": "execute",
 }
 
 # Regex that extracts {param_name} tokens from a template string.
@@ -194,10 +216,10 @@ class BacnetRouteMapping:
             raise InvalidMappingError(f"Route '{label}': property_identifier must not be empty")
 
         # action must be valid if explicitly specified
-        if self.action and self.action not in VALID_ACTIONS:
+        if self.action and self.action not in _BACNET_VALID_ACTIONS:
             raise InvalidMappingError(
                 f"Route '{label}': invalid action '{self.action}'. "
-                f"Valid actions: {sorted(VALID_ACTIONS)}"
+                f"Valid actions: {sorted(_BACNET_VALID_ACTIONS)}"
             )
 
         # resource_type

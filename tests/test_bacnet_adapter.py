@@ -112,6 +112,30 @@ class TestServicePrimitives:
         assert result.request is not None
         assert result.request.action == "read"
 
+    def test_command_value_default_action_is_execute(self) -> None:
+        # CommandValue's implicit (no explicit route action) default is
+        # "execute", conforming to the canonical action vocabulary used by
+        # DNP3/IEC 61850/Niagara command primitives. Explicit
+        # `action="control"` remains a supported compatibility alias — see
+        # test_command_value_normalizes_to_control above.
+        route = make_route(
+            service="CommandValue",
+            object_type="*",
+            property_identifier="*",
+            action="",
+        )
+        adapter = make_adapter(route)
+        result = adapter.normalize(
+            make_op(
+                service="CommandValue",
+                object_type="binaryOutput",
+                property_identifier="presentValue",
+            )
+        )
+        assert result.success
+        assert result.request is not None
+        assert result.request.action == "execute"
+
 
 # ---------------------------------------------------------------------------
 # Protocol

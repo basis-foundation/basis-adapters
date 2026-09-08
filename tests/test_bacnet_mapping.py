@@ -305,9 +305,28 @@ class TestResolveAction:
         assert config.resolve_action(route, make_op(service="SubscribeCOV")) == "subscribe"
 
     def test_default_command_value_action(self) -> None:
+        # CommandValue's default (implicit) action is "execute" per the
+        # canonical action vocabulary — matching DNP3/IEC 61850/Niagara
+        # command-primitive defaults. Explicit `action="control"` remains a
+        # fully supported compatibility alias (see test_explicit_action_used).
         route = make_route(action="")
         config = BacnetMappingConfig(routes=[route])
+        assert config.resolve_action(route, make_op(service="CommandValue")) == "execute"
+
+    def test_explicit_control_action_still_honored(self) -> None:
+        # "control" is a compatibility alias: explicit configs that set it
+        # continue to work verbatim even though the implicit default changed.
+        route = make_route(action="control", service="CommandValue")
+        config = BacnetMappingConfig(routes=[route])
         assert config.resolve_action(route, make_op(service="CommandValue")) == "control"
+
+    def test_explicit_execute_action_is_valid(self) -> None:
+        # "execute" is a normalized action verb in its own right (not just an
+        # implicit default): a route that explicitly names it must be
+        # accepted by validation and honored verbatim.
+        route = make_route(action="execute", service="CommandValue")
+        config = BacnetMappingConfig(routes=[route])
+        assert config.resolve_action(route, make_op(service="CommandValue")) == "execute"
 
     def test_unknown_service_no_default_raises(self) -> None:
         # Create a route with empty action to force default lookup
