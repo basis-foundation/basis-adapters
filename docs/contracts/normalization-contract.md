@@ -150,7 +150,10 @@ the canonical fields.
 ## How REST Maps into the Canonical Shape
 
 ```
-HTTP method      → action (via route action_map or default method→action map)
+HTTP method      → action (via route action_map or default method→action map:
+                   GET→read, HEAD→read, OPTIONS→browse, POST→write,
+                   PUT→write, PATCH→write, DELETE→write, TRACE→read,
+                   CONNECT→read)
 route.resource_type → resource_type
 resource_id_template rendered with path captures → resource_id
 "rest"           → protocol
@@ -158,16 +161,34 @@ original ProtocolOperation → protocol_evidence
 metadata["subject_hint"] → subject_hint
 ```
 
+OPTIONS's default action is `"browse"`, matching the canonical vocabulary
+used elsewhere for capability/address-space enumeration (OPC UA `Browse`,
+Niagara `BROWSE`/`RESOLVE_ORD`/`LIST_CHILDREN`). `"discover"` remains a
+fully valid, accepted action value: a route may set
+`action_map={"OPTIONS": "discover"}` (or any other method) explicitly and
+it is honored verbatim — only the *implicit* default for unmapped OPTIONS
+routes changed.
+
 ## How BACnet Maps into the Canonical Shape
 
 ```
-BACnet service   → action (via route action or default service→action map)
+BACnet service   → action (via route action or default service→action map:
+                   ReadProperty→read, WriteProperty→write,
+                   SubscribeCOV→subscribe, CommandValue→execute)
 route.resource_type → resource_type
 resource_id_template rendered with BACnet fields → resource_id
 "bacnet"         → protocol
 BacnetOperation.to_protocol_operation() → protocol_evidence
 metadata["subject_hint"] → subject_hint
 ```
+
+CommandValue's default action is `"execute"`, matching the canonical
+vocabulary used elsewhere for command/operational primitives (DNP3
+SELECT/OPERATE/DIRECT_OPERATE, IEC 61850 SELECT/OPERATE/DIRECT_OPERATE,
+Niagara COMMAND_POINT/OVERRIDE_POINT). `"control"` remains a fully valid,
+accepted action value: a route may set `"action": "control"` explicitly
+and it is honored verbatim — only the *implicit* default for routes with
+no explicit action changed.
 
 ## How Modbus Maps into the Canonical Shape
 

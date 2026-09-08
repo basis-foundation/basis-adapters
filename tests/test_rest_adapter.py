@@ -141,6 +141,57 @@ class TestMutatingMethodsNormalization:
 
 
 # ---------------------------------------------------------------------------
+# OPTIONS → browse (default), with "discover" retained as a compatible alias
+# ---------------------------------------------------------------------------
+
+
+class TestOptionsNormalization:
+    def test_options_default_action_is_browse(self) -> None:
+        # OPTIONS's implicit (no explicit action_map entry) default is
+        # "browse", conforming to the canonical action vocabulary used by
+        # OPC UA Browse / Niagara BROWSE. Explicit
+        # `action_map={"OPTIONS": "discover"}` remains a supported
+        # compatibility alias — see test_options_explicit_discover_honored.
+        config = RestMappingConfig(
+            routes=[
+                RouteMapping(
+                    methods=["OPTIONS"],
+                    path_pattern="/devices/{device_id}",
+                    resource_type="device",
+                    resource_id_template="{device_id}",
+                    name="options-device",
+                )
+            ]
+        )
+        adapter = RestAdapter(mapping=config, context=AdapterContext(adapter_id="rest-test"))
+        op = ProtocolOperation(protocol="rest", method="OPTIONS", path="/devices/ahu-1")
+        result = adapter.normalize(op)
+        assert result.success is True
+        assert result.request is not None
+        assert result.request.action == "browse"
+
+    def test_options_explicit_discover_honored(self) -> None:
+        config = RestMappingConfig(
+            routes=[
+                RouteMapping(
+                    methods=["OPTIONS"],
+                    path_pattern="/devices/{device_id}",
+                    resource_type="device",
+                    resource_id_template="{device_id}",
+                    action_map={"OPTIONS": "discover"},
+                    name="options-device-explicit",
+                )
+            ]
+        )
+        adapter = RestAdapter(mapping=config, context=AdapterContext(adapter_id="rest-test"))
+        op = ProtocolOperation(protocol="rest", method="OPTIONS", path="/devices/ahu-1")
+        result = adapter.normalize(op)
+        assert result.success is True
+        assert result.request is not None
+        assert result.request.action == "discover"
+
+
+# ---------------------------------------------------------------------------
 # Fail closed on unknown routes
 # ---------------------------------------------------------------------------
 
